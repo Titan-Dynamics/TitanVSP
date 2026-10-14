@@ -17,11 +17,13 @@
 //     from there Newton follows that intersection around the loop on the two surfaces' own
 //     parameters, so the contacts move smoothly even round the LE, where a thin wing's upper and
 //     lower surfaces are both close by.  Stations are added wherever the section turns quickly.
-//  3. The sections.  The ball's arc between its two contacts is the fillet's face.  Its edges run
-//     on into the wing and fuselage by Sink, and the section closes through a point past the
-//     junction, buried in both, so the fillet is a closed body overlapping both.
+//  3. The sections.  The ball's arc between its two contacts is the fillet's face.  The face runs
+//     on past each contact by Sink, along the surface and easing under it, so the fillet fades
+//     into the wing and fuselage.  The section closes through a point past the junction, buried
+//     in both, so the fillet is a closed body overlapping both.
 //  4. The TE.  The junction has a corner at the wing's TE, where the upper and lower fillets
-//     would cross.  The radius tapers to nothing approaching it, so the body ends in a point.
+//     would cross.  The radius tapers approaching it, and the fillet stops on a small section
+//     short of it at each end, closed by a flat cap, so the body is watertight.
 //  5. The surface.  The sections are skinned C2 around the loop, spaced as they lie along it.
 //
 //////////////////////////////////////////////////////////////////////
@@ -454,6 +456,38 @@ public:
     vec3d WingPnt( double u, double w ) const       { return m_Wing.CompPnt( WingU( u ), WingW( w ) ); }
     vec3d FusePnt( double u, double w ) const       { return m_Fuse.CompPnt( FuseU( u ), FuseW( w ) ); }
 
+    // The point on the wing (fuselage) nearest p, searching from ( u, w ), which are updated to
+    // where it is.  n is the outward normal there.
+    vec3d OnWing( const vec3d & p, double & u, double & w, vec3d & n ) const
+    {
+        double u0 = WingU( u ), w0 = WingW( w );
+        m_Wing.FindNearest( u, w, p, u0, w0 );
+        if ( !std::isfinite( u ) || !std::isfinite( w ) )
+        {
+            u = u0;
+            w = w0;
+        }
+        u = WingU( u );
+        w = WingW( w );
+        n = WingNormal( u, w );
+        return WingPnt( u, w );
+    }
+
+    vec3d OnFuse( const vec3d & p, double & u, double & w, vec3d & n ) const
+    {
+        double u0 = FuseU( u ), w0 = FuseW( w );
+        m_Fuse.FindNearest( u, w, p, u0, w0 );
+        if ( !std::isfinite( u ) || !std::isfinite( w ) )
+        {
+            u = u0;
+            w = w0;
+        }
+        u = FuseU( u );
+        w = FuseW( w );
+        n = FuseNormal( u, w );
+        return FusePnt( u, w );
+    }
+
     vec3d Wing( double u, double w, double r ) const
     {
         return WingPnt( u, w ) + WingNormal( u, w ) * r;
@@ -680,20 +714,33 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
         return true;
     };
 
-    // Stations where the ball has shrunk to nothing are just the junction point.
-    const double rmin = 1.0e-3 * R;
-    auto degenerate_at = [&]( double w, Station & s )
+    // The fillet ends on a small but real section near each end of the TE rather than shrinking
+    // to a point, so the end caps close it off into a clean, watertight body.  Each end is where
+    // the tapering radius, coming in from the TE, reaches rend.
+    const double rend = 0.05 * R;
+    auto end_param = [&]( double wte, double wmid )
     {
-        s = Station();
-        s.m_W = w;
-        s.m_Degenerate = true;
-        if ( !junction( w, s.m_J ) )
+        if ( radius_at( wte ) >= rend )
         {
-            return false;
+            return wte;
         }
-        s.m_C = s.m_QW = s.m_QF = s.m_J;
-        return true;
+        double a = wte, b = wmid;
+        for ( int k = 0; k < 60; k++ )
+        {
+            double m = 0.5 * ( a + b );
+            if ( radius_at( m ) >= rend )
+            {
+                b = m;
+            }
+            else
+            {
+                a = m;
+            }
+        }
+        return b;
     };
+    const double wlo = end_param( 0.0, 0.5 * wmax );
+    const double whi = end_param( wmax, 0.5 * wmax );
 
     //==== March around the junction from the seed, both ways ====//
     vector< Station > stations;
@@ -703,7 +750,16 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
     }
     stations.push_back( seed );
 
-    vector< double > targets = LoopParams( nstation, wmax );
+    vector< double > targets = { wlo };
+    for ( double w : LoopParams( nstation, wmax ) )
+    {
+        if ( w > wlo + 1.0e-6 * wmax && w < whi - 1.0e-6 * wmax )
+        {
+            targets.push_back( w );
+        }
+    }
+    targets.push_back( whi );
+
     for ( int dir : { 1, -1 } )
     {
         Station last = seed;
@@ -723,14 +779,6 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
         for ( double w : ws )
         {
             Station s;
-            if ( radius_at( w ) < rmin )
-            {
-                if ( degenerate_at( w, s ) )
-                {
-                    stations.push_back( s );
-                }
-                continue;
-            }
             if ( !solve_at( last, w, s ) )
             {
                 break;  // Lost the ball; the fillet ends at the last good station.
@@ -777,22 +825,6 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
         }
     }
 
-    // Close off both ends at the TE.
-    for ( double w : { 0.0, wmax } )
-    {
-        bool have = false;
-        for ( const Station & s : stations )
-        {
-            have = have || fabs( s.m_W - w ) < 1.0e-9;
-        }
-        Station s;
-        if ( !have && degenerate_at( w, s ) )
-        {
-            stations.push_back( s );
-        }
-    }
-    std::sort( stations.begin(), stations.end(), []( const Station & a, const Station & b ) { return a.m_W < b.m_W; } );
-
     const int n = (int)stations.size();
     if ( n < 5 )
     {
@@ -800,22 +832,34 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
     }
 
     //==== One closed section per station ====//
-    // Sunk wing edge, the arc from wing to fuselage, sunk fuselage edge, then a point past the
-    // junction buried in both bodies.
+    // The fillet's face -- carried on past the wing contact along the wing, round the arc, and on
+    // past the fuselage contact along the fuselage -- then closed through a point past the
+    // junction, buried in both bodies.
     const int narc = 16;
+    const int next = 3;                     // Points on each extension of the face.
+    const int nface = 2 * next + narc + 1;
     vector< double > param;
-    param.push_back( 0.0 );                             // Wing edge, sunk.
+    for ( int j = next; j >= 1; j-- )
+    {
+        param.push_back( 0.5 * ( next - j ) / next );   // Along the wing, over [0, 0.5) ...
+    }
     for ( int k = 0; k <= narc; k++ )
     {
-        param.push_back( 0.25 + 2.0 * k / narc );       // The arc, over [0.25, 2.25].
+        param.push_back( 0.5 + 2.0 * k / narc );        // ... the arc, over [0.5, 2.5] ...
     }
-    param.push_back( 2.5 );                             // Fuselage edge, sunk.
-    param.push_back( 3.25 );                            // Buried point.
+    for ( int j = 1; j <= next; j++ )
+    {
+        param.push_back( 2.5 + 0.5 * j / next );        // ... along the fuselage, to 3.
+    }
+    param.push_back( 3.5 );                             // Buried point.
     param.push_back( 4.0 );                             // Closes back on the start.
 
-    // The sink never needs to exceed the ball, and shrinks with it toward the TE, where the
-    // wing is too thin to sink into far.
-    const double sink0 = std::min( std::max( sink, 0.0 ), R );
+    // Sink widens the fillet: its face runs on past each contact along the surface, easing under
+    // it, so it fades into the wing and fuselage instead of ending on a line.  The face dips to
+    // this fraction of the run below the surface by its end.  The run shrinks with the ball toward
+    // the TE, and is kept within reason of the ball's size.
+    const double dip = 0.15;
+    const double sink0 = std::min( std::max( sink, 0.0 ), 4.0 * R );
 
     vector< VspCurve > ribs( n );
     vector< vec3d > centroid( n );
@@ -824,7 +868,7 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
     for ( int i = 0; i < n; i++ )
     {
         const Station & s = stations[i];
-        vector< vec3d > pts( narc + 4, s.m_J );
+        vector< vec3d > pts( nface + 1, s.m_J );
         if ( !s.m_Degenerate )
         {
             vec3d vw = s.m_QW - s.m_C;
@@ -840,38 +884,49 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
                 {
                     v = vw * ( sin( ( 1.0 - t ) * ang ) / sin( ang ) ) + vf * ( sin( t * ang ) / sin( ang ) );
                 }
-                pts[k + 1] = s.m_C + v * s.m_R;
+                pts[next + k] = s.m_C + v * s.m_R;
             }
 
-            // Run the edges on into the wing and fuselage, so the fillet overlaps both.
+            // The directions the arc leaves its two ends, carried on along each surface.
             double sk = sink0 * s.m_R / R;
-            pts[0] = s.m_QW - s.m_NW * sk;
-            pts[narc + 2] = s.m_QF - s.m_NF * sk;
+            vec3d pn = cross( vw, vf );
+            pn.normalize();
+            vec3d tw = cross( vw, pn );     // At the wing contact, away from the arc.
+            vec3d tf = cross( pn, vf );     // At the fuselage contact, away from the arc.
+
+            double uw = s.m_UW, ww = s.m_W, uf = s.m_UF, wf = s.m_WF;
+            for ( int j = 1; j <= next; j++ )
+            {
+                double a = (double)j / next;
+                vec3d n;
+                vec3d p = op.OnWing( s.m_QW + tw * ( sk * a ), uw, ww, n );
+                pts[next - j] = ( ang > 1.0e-9 ) ? p - n * ( dip * sk * a * a ) : s.m_QW;
+                p = op.OnFuse( s.m_QF + tf * ( sk * a ), uf, wf, n );
+                pts[next + narc + j] = ( ang > 1.0e-9 ) ? p - n * ( dip * sk * a * a ) : s.m_QF;
+            }
 
             // Close the section through a point past the junction, buried in both bodies.
             vec3d in = s.m_J - s.m_C;
             in.normalize();
-            pts[narc + 3] = s.m_J + in * ( 0.3 * s.m_R + sk );
+            pts[nface] = s.m_J + in * ( 0.3 * s.m_R + dip * sk );
 
             if ( s.m_R > mid_r )
             {
                 mid_r = s.m_R;
                 mid_c = s.m_C;
-                mid_p = pts[narc / 2 + 1];
+                mid_p = pts[next + narc / 2];
             }
         }
-        // The arc as a smooth spline, and the buried legs as straight lines, so nothing rounds the
-        // corners where the arc meets them and lifts the fillet's edges off the surfaces.
-        VspCurve leg_in, arc, legs_out;
-        leg_in.InterpolateLinear( { pts[0], pts[1] }, { param[0], param[1] }, false );
-        vector< vec3d > arc_pts( pts.begin() + 1, pts.begin() + narc + 2 );
-        vector< double > arc_param( param.begin() + 1, param.begin() + narc + 2 );
-        arc.InterpolateCSpline( arc_pts, arc_param, false );
-        legs_out.InterpolateLinear( { pts[narc + 1], pts[narc + 2], pts[narc + 3], pts[0] },
-                                    { param[narc + 1], param[narc + 2], param[narc + 3], param[narc + 4] }, false );
-        piecewise_curve_type pc = leg_in.GetCurve();
-        pc.push_back( arc.GetCurve() );
-        pc.push_back( legs_out.GetCurve() );
+
+        // The face as one smooth spline, and the buried legs as straight lines.
+        VspCurve face, legs;
+        vector< vec3d > face_pts( pts.begin(), pts.begin() + nface );
+        vector< double > face_param( param.begin(), param.begin() + nface );
+        face.InterpolateCSpline( face_pts, face_param, false );
+        legs.InterpolateLinear( { pts[nface - 1], pts[nface], pts[0] },
+                                { param[nface - 1], param[nface], param[nface + 1] }, false );
+        piecewise_curve_type pc = face.GetCurve();
+        pc.push_back( legs.GetCurve() );
         // Skinning wants every segment of every section the same degree.
         pc.degree_promote_to( 3 );
         ribs[i].SetCurve( pc );
@@ -936,10 +991,14 @@ FilletGeom::FilletGeom( Vehicle* vehicle_ptr ) : Geom( vehicle_ptr )
     m_TETaper.SetDescript( "Fraction of the junction, from the TE, over which the radius tapers to nothing" );
 
     m_Sink.Init( "Sink", "Design", this, 1.0, 0.0, 1.0e12 );
-    m_Sink.SetDescript( "Depth the fillet's edges are sunk into the wing and fuselage, closing any gap along them" );
+    m_Sink.SetDescript( "Distance the fillet's face runs on past its contacts, along the wing and fuselage and easing under them" );
 
     m_TessU = 3;
     m_TessW = 25;
+
+    // Closed off at both ends, so the fillet is a watertight body that exports and booleans cleanly.
+    m_CapUMinOption = vsp::FLAT_END_CAP;
+    m_CapUMaxOption = vsp::FLAT_END_CAP;
 
     m_MainSurfVec.clear();
 }
