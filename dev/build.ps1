@@ -63,6 +63,9 @@ $ErrorActionPreference = 'Continue'   # so the import's stderr doesn't throw
 $NumpyMissing = $LASTEXITCODE -ne 0
 $ErrorActionPreference = 'Stop'
 if ($NumpyMissing) { throw "numpy not installed for $Python. Run: python -m pip install numpy" }
+# The API is built for this one Python version.  The packaged python\environment.yml pins it, so
+# the conda environment its setup script creates can load the bindings.
+$PyVer = & $Python -c "import sys; print('%d.%d' % sys.version_info[:2])"
 
 # 3. OpenVSP itself, with the Python API. Doxygen and Sphinx docs are disabled
 #    (slow, and need Doxygen). Re-configures whenever this script is edited.
@@ -75,6 +78,7 @@ if (-not (Test-Path $Cache) -or (Get-Item $PSCommandPath).LastWriteTime -gt (Get
             "-DCMAKE_INSTALL_PREFIX=$InstallDir" `
             "-DSWIG_EXECUTABLE=$Swig" `
             "-DPython3_EXECUTABLE=$Python" `
+            "-DPYTHON_VERSION_SHORT=$PyVer" `
             -DVSP_NO_API_WRAPPERS=OFF -DVSP_NO_DOC=ON -DVSP_NO_PYDOC=ON
     }
 }
