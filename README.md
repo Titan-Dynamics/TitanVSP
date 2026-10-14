@@ -11,6 +11,14 @@ Everything else is upstream OpenVSP, unchanged.
 - [Keeping up with upstream](#keeping-up-with-upstream)
 - [License](#license)
 
+<img width="1751" height="1667" alt="image" src="https://github.com/user-attachments/assets/afc0d67f-6169-4632-a2d3-7a120597f565" />
+<img width="1751" height="1667" alt="image" src="https://github.com/user-attachments/assets/16e6dd20-bc85-4532-9558-08426af3dde7" />
+<img width="1751" height="1667" alt="image" src="https://github.com/user-attachments/assets/aa96ff56-7ca0-4045-9930-8145a1560cdc" />
+<p>
+  <img align="top" width="208" alt="image" src="https://github.com/user-attachments/assets/94c02a18-eb8f-4099-aa1b-9912b3b5ed55" />
+  <img align="top" width="302" alt="image" src="https://github.com/user-attachments/assets/3edbe99f-fc73-4a61-b16d-319a5c8f5455" />
+</p>
+
 ## About OpenVSP
 
 OpenVSP is a parametric aircraft geometry tool. You build a 3D model of an aircraft from common
