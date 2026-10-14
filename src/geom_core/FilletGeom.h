@@ -46,6 +46,7 @@ public:
 protected:
     virtual void UpdateSurf();
     virtual void UpdateCopyXFormParms();
+    virtual void UpdateCopySurfParms();
 
     void SetFuse( const string & id );
     Geom* FindFuse( Geom* wing );

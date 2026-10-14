@@ -22,8 +22,7 @@
 //     into the wing and fuselage.  The section closes through a point past the junction, buried
 //     in both, so the fillet is a closed body overlapping both.
 //  4. The TE.  The junction has a corner at the wing's TE, where the upper and lower fillets
-//     would cross.  The radius tapers approaching it, and the fillet stops on a small section
-//     short of it at each end, closed by a flat cap, so the body is watertight.
+//     would cross.  The radius tapers to nothing approaching it, so the body ends in a point.
 //  5. The surface.  The sections are skinned C2 around the loop, spaced as they lie along it.
 //
 //////////////////////////////////////////////////////////////////////
@@ -591,10 +590,17 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
     wing.Add( &wsurf );
     const double wmax = wsurf.GetWMax();
 
+    // The fillet comes to a point just short of the TE at each end (see below), so the radius
+    // tapers to nothing there.
+    const double wtip = 0.002 * wmax;
     auto radius_at = [&]( double w )
     {
-        double from_te = std::min( w, wmax - w ) / ( 0.5 * wmax );
-        return R * ( taper > 0.0 ? SmoothStep( from_te / taper ) : 1.0 );
+        double from_tip = ( std::min( w, wmax - w ) - wtip ) / ( 0.5 * wmax - wtip );
+        if ( from_tip <= 0.0 )
+        {
+            return 0.0;
+        }
+        return R * ( taper > 0.0 ? SmoothStep( from_tip / taper ) : 1.0 );
     };
 
     auto junction = [&]( double w, vec3d & j )
@@ -714,33 +720,21 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
         return true;
     };
 
-    // The fillet ends on a small but real section near each end of the TE rather than shrinking
-    // to a point, so the end caps close it off into a clean, watertight body.  Each end is where
-    // the tapering radius, coming in from the TE, reaches rend.
-    const double rend = 0.05 * R;
-    auto end_param = [&]( double wte, double wmid )
+    // Stations where the ball has shrunk to nothing are just the junction point, so the fillet
+    // comes to a point at each end of the TE.
+    const double rmin = 1.0e-3 * R;
+    auto degenerate_at = [&]( double w, Station & s )
     {
-        if ( radius_at( wte ) >= rend )
+        s = Station();
+        s.m_W = w;
+        s.m_Degenerate = true;
+        if ( !junction( w, s.m_J ) )
         {
-            return wte;
+            return false;
         }
-        double a = wte, b = wmid;
-        for ( int k = 0; k < 60; k++ )
-        {
-            double m = 0.5 * ( a + b );
-            if ( radius_at( m ) >= rend )
-            {
-                b = m;
-            }
-            else
-            {
-                a = m;
-            }
-        }
-        return b;
+        s.m_C = s.m_QW = s.m_QF = s.m_J;
+        return true;
     };
-    const double wlo = end_param( 0.0, 0.5 * wmax );
-    const double whi = end_param( wmax, 0.5 * wmax );
 
     //==== March around the junction from the seed, both ways ====//
     vector< Station > stations;
@@ -750,15 +744,18 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
     }
     stations.push_back( seed );
 
-    vector< double > targets = { wlo };
+    // The two ends come to their points a hair short of the TE, one on the lower surface and one
+    // on the upper.  Ending exactly on the TE would put both points on the same spot, pinching the
+    // fillet into a shape mesh booleans reject.
+    vector< double > targets = { wtip };
     for ( double w : LoopParams( nstation, wmax ) )
     {
-        if ( w > wlo + 1.0e-6 * wmax && w < whi - 1.0e-6 * wmax )
+        if ( w > wtip && w < wmax - wtip )
         {
             targets.push_back( w );
         }
     }
-    targets.push_back( whi );
+    targets.push_back( wmax - wtip );
 
     for ( int dir : { 1, -1 } )
     {
@@ -779,6 +776,12 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
         for ( double w : ws )
         {
             Station s;
+            if ( radius_at( w ) < rmin )
+            {
+                // Too small to matter.  Only the two ends, added below, close to a point; a second
+                // point just inside an end would pinch the fillet there.
+                continue;
+            }
             if ( !solve_at( last, w, s ) )
             {
                 break;  // Lost the ball; the fillet ends at the last good station.
@@ -824,6 +827,22 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
             break;
         }
     }
+
+    // Close off both ends at the TE in a point.
+    for ( double w : { wtip, wmax - wtip } )
+    {
+        bool have = false;
+        for ( const Station & s : stations )
+        {
+            have = have || fabs( s.m_W - w ) < 1.0e-9;
+        }
+        Station s;
+        if ( !have && degenerate_at( w, s ) )
+        {
+            stations.push_back( s );
+        }
+    }
+    std::sort( stations.begin(), stations.end(), []( const Station & a, const Station & b ) { return a.m_W < b.m_W; } );
 
     const int n = (int)stations.size();
     if ( n < 5 )
@@ -959,6 +978,31 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
 
     out = VspSurf();
     out.SkinCX( ribs, rib_data_type::C2, uparam, false );
+
+    // Tessellation expects each section of a surface to span exactly one unit of u; with the
+    // spacing above, the short first section was given no rows at all, leaving the point of the
+    // fillet out of the mesh and a pinhole in it.  Relabel every section to span one unit.  Each
+    // patch keeps its exact shape -- only its parameter interval changes.
+    piecewise_surface_type* ps = out.GetBezierSurface();
+    const int nup = ps->number_u_patches();
+    const int nvp = ps->number_v_patches();
+    vector< double > dus( nup, 1.0 ), dvs( nvp );
+    for ( int vi = 0; vi < nvp; vi++ )
+    {
+        dvs[vi] = ps->get_dv( vi );
+    }
+    piecewise_surface_type relabeled;
+    relabeled.init_uv( dus.begin(), dus.end(), dvs.begin(), dvs.end(), 0.0, ps->get_v0() );
+    for ( int ui = 0; ui < nup; ui++ )
+    {
+        for ( int vi = 0; vi < nvp; vi++ )
+        {
+            piecewise_surface_type::surface_type patch;
+            ps->get( patch, ui, vi );
+            relabeled.set( patch, ui, vi );
+        }
+    }
+    *ps = relabeled;
     out.SetSurfType( vsp::NORMAL_SURF );
     out.SetMagicVParm( false );
 
@@ -995,10 +1039,6 @@ FilletGeom::FilletGeom( Vehicle* vehicle_ptr ) : Geom( vehicle_ptr )
 
     m_TessU = 3;
     m_TessW = 25;
-
-    // Closed off at both ends, so the fillet is a watertight body that exports and booleans cleanly.
-    m_CapUMinOption = vsp::FLAT_END_CAP;
-    m_CapUMaxOption = vsp::FLAT_END_CAP;
 
     m_MainSurfVec.clear();
 }
@@ -1075,6 +1115,15 @@ void FilletGeom::UpdateCopyXFormParms()
     {
         p->Deactivate();
     }
+}
+
+// The fillet closes itself, coming to a point at each end, so it never takes end caps.
+void FilletGeom::UpdateCopySurfParms()
+{
+    m_CapUMinOption = vsp::NO_END_CAP;
+    m_CapUMaxOption = vsp::NO_END_CAP;
+    m_CapUMinOption.Deactivate();
+    m_CapUMaxOption.Deactivate();
 }
 
 // Blend into a different fuselage, rebuilding whenever that one changes.
