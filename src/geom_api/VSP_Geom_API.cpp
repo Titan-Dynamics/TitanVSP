@@ -55,6 +55,7 @@
 #include "LightMgr.h"
 #include "VspUtil.h"
 #include "WingGeom.h"
+#include "WingBodyFillet.h"
 #include "MeshGeom.h"
 #include "PtCloudGeom.h"
 #include "StlHelper.h"
@@ -188,6 +189,25 @@ void Update( bool update_managers )
     }
 
     ErrorMgr.NoError();
+}
+
+int BlendWingsAndFuselages( double radius, int num_sections )
+{
+    if ( num_sections < 2 )
+    {
+        ErrorMgr.AddError( VSP_INVALID_INPUT_VAL,"BlendWingsAndFuselages::num_sections must be at least 2" );
+        return 0;
+    }
+
+    WingBodyFillet::Settings settings;
+    settings.m_Radius = radius;
+    settings.m_NumSect = num_sections;
+
+    vector< string > messages;
+    int n = WingBodyFillet::BlendAll( GetVehicle(), messages, settings );
+
+    ErrorMgr.NoError();
+    return n;
 }
 
 

@@ -238,6 +238,9 @@ public:
     virtual double UtoEta( const double &u, bool ignoreCap = false );
     virtual double EtatoU( const double &eta, bool ignoreCap = false );
 
+    // Unit chord airfoils lofted linearly between sections; u is the section index.
+    const VspSurf & GetFoilSurf() const                   { return m_FoilSurf; }
+
     //==== Planform Parms ====//
     Parm m_TotalSpan;
     Parm m_TotalProjSpan;

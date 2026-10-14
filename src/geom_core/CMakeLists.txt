@@ -91,6 +91,7 @@ RoutingGeom.cpp
 ScriptMgr.cpp
 SnapTo.cpp
 StackGeom.cpp
+WingBodyFillet.cpp
 StructureMgr.cpp
 SubSurface.cpp
 SubSurfaceMgr.cpp
@@ -182,6 +183,7 @@ RoutingGeom.h
 ScriptMgr.h
 SnapTo.h
 StackGeom.h
+WingBodyFillet.h
 StructureMgr.h
 SubSurface.h
 SubSurfaceMgr.h
