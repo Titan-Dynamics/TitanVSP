@@ -1229,16 +1229,16 @@ string Vehicle::AddGeom( const GeomType & type )
             }
 
         }
-        //==== A Fillet Blends A Wing Into A Fuselage, So It Must Hang Off A Wing ====//
+        //==== A Fillet Blends A Wing Or Fuselage Into A Fuselage, So It Must Hang Off One ====//
         else if ( type.m_Type == FILLET_GEOM_TYPE )
         {
             Geom* par = FindGeom( add_geom->GetParentID() );
-            if ( !par || par->GetType().m_Type != MS_WING_GEOM_TYPE )
+            if ( !par || ( par->GetType().m_Type != MS_WING_GEOM_TYPE && !FilletGeom::IsBodyType( par->GetType().m_Type ) ) )
             {
                 MessageData errMsgData;
                 errMsgData.m_String = "Error";
                 errMsgData.m_IntVec.push_back( vsp::VSP_INVALID_TYPE );
-                errMsgData.m_StringVec.push_back( string( "Error:  A Fillet must be added to a wing.  Select the wing first." ) );
+                errMsgData.m_StringVec.push_back( string( "Error:  A Fillet must be added to a wing or a fuselage.  Select it first." ) );
 
                 MessageMgr::getInstance().SendAll( errMsgData );
 
