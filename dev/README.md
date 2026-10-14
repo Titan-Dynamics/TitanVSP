@@ -1,6 +1,9 @@
 # Windows dev scripts
 
-Prerequisites: Visual Studio 2022 (Desktop C++ workload), CMake, Git. Pandoc is optional (in-app help).
+Prerequisites: Visual Studio 2022 (Desktop C++ workload), CMake, Git, SWIG, Python 3 with numpy.
+Pandoc is optional (in-app help).
+
+**Compile and open OpenVSP:** `powershell -ExecutionPolicy Bypass -File dev\run.ps1` (or the "OpenVSP (Dev)" shortcut).
 
 | Script | What it does |
 | --- | --- |
@@ -10,4 +13,16 @@ Prerequisites: Visual Studio 2022 (Desktop C++ workload), CMake, Git. Pandoc is 
 
 Run any of them with `powershell -ExecutionPolicy Bypass -File dev\<script>.ps1`.
 
-Syncing with upstream: `git fetch upstream; git merge upstream/main`.
+## Python API
+
+The build creates a venv with the `openvsp` package installed in editable mode from the build tree,
+so after changing the API (`src/geom_api/`) and rebuilding, the venv uses the new bindings automatically.
+
+```powershell
+..\OpenVSP-build\vsp\venv\Scripts\Activate.ps1
+python -c "import openvsp as vsp; print(vsp.GetVSPVersion())"
+```
+
+## Syncing with upstream
+
+ `git fetch upstream; git merge upstream/main`.

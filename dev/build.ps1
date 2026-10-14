@@ -5,6 +5,7 @@
 #   <parent>\OpenVSP-build\Libraries third-party libraries (built once)
 #   <parent>\OpenVSP-build\vsp       OpenVSP build tree
 #   <parent>\OpenVSP-build\install   runnable OpenVSP (vsp.exe + resources)
+#   <parent>\OpenVSP-build\vsp\venv  Python venv with the openvsp API (editable install)
 #
 # Usage:  .\dev\build.ps1            incremental build + install
 #         .\dev\build.ps1 -Clean     wipe the OpenVSP build tree (keeps Libraries) and rebuild
@@ -46,19 +47,44 @@ if (-not (Test-Path (Join-Path $LibsDir 'VSP_Libraries_Config.cmake'))) {
     Invoke-Step 'Build Libraries' { cmake --build $LibsDir --config Release --parallel }
 }
 
-# 2. OpenVSP itself. Python/MATLAB API wrappers and Doxygen docs are disabled
-#    (they need SWIG/Doxygen); remove those flags if you want them.
-if (-not (Test-Path (Join-Path $VspDir 'CMakeCache.txt'))) {
+# 2. Python API prerequisites. CMake silently skips the Python API if SWIG, Python
+#    or numpy is missing, so check up front and fail loudly instead.
+$Swig = (Get-Command swig -ErrorAction SilentlyContinue).Source
+if (-not $Swig) {
+    # winget's SWIG package doesn't always put swig.exe on PATH.
+    $Swig = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filter swig.exe -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+}
+if (-not $Swig) { throw 'SWIG not found. Install it with: winget install SWIG.SWIG' }
+$Python = (Get-Command python -ErrorAction SilentlyContinue).Source
+if (-not $Python) { throw 'Python not found on PATH.' }
+$ErrorActionPreference = 'Continue'   # so the import's stderr doesn't throw
+& $Python -c 'import numpy' 2>$null
+$NumpyMissing = $LASTEXITCODE -ne 0
+$ErrorActionPreference = 'Stop'
+if ($NumpyMissing) { throw "numpy not installed for $Python. Run: python -m pip install numpy" }
+
+# 3. OpenVSP itself, with the Python API. Doxygen and Sphinx docs are disabled
+#    (slow, and need Doxygen). Re-configures whenever this script is edited.
+$Cache = Join-Path $VspDir 'CMakeCache.txt'
+if (-not (Test-Path $Cache) -or (Get-Item $PSCommandPath).LastWriteTime -gt (Get-Item $Cache).LastWriteTime) {
     Invoke-Step 'Configure OpenVSP' {
         cmake -S (Join-Path $RepoRoot 'src') -B $VspDir -G $Generator -A x64 `
             -DCMAKE_BUILD_TYPE=Release `
             "-DVSP_LIBRARY_PATH=$LibsDir" `
             "-DCMAKE_INSTALL_PREFIX=$InstallDir" `
-            -DVSP_NO_API_WRAPPERS=ON -DVSP_NO_DOC=ON -DVSP_NO_PYDOC=ON
+            "-DSWIG_EXECUTABLE=$Swig" `
+            "-DPython3_EXECUTABLE=$Python" `
+            -DVSP_NO_API_WRAPPERS=OFF -DVSP_NO_DOC=ON -DVSP_NO_PYDOC=ON
     }
 }
 
 # INSTALL builds everything, then copies vsp.exe and its resources into $InstallDir.
 Invoke-Step 'Build + install OpenVSP' { cmake --build $VspDir --config Release --target INSTALL --parallel }
 
+# Dev venv with the openvsp package installed in editable mode from the build tree,
+# so rebuilt API bindings are picked up without reinstalling.
+Invoke-Step 'Build Python venv' { cmake --build $VspDir --config Release --target venv }
+
 Write-Host "Done. OpenVSP is at $InstallDir\vsp.exe" -ForegroundColor Green
+Write-Host "Python API venv: $VspDir\venv\Scripts\python.exe" -ForegroundColor Green
