@@ -14,12 +14,12 @@ OpenVSP, unchanged.
 - [Keeping up with upstream](#keeping-up-with-upstream)
 - [License](#license)
 
-<img width="1751" height="1667" alt="image" src="https://github.com/user-attachments/assets/afc0d67f-6169-4632-a2d3-7a120597f565" />
-<img width="1751" height="1667" alt="image" src="https://github.com/user-attachments/assets/16e6dd20-bc85-4532-9558-08426af3dde7" />
-<img width="1751" height="1667" alt="image" src="https://github.com/user-attachments/assets/aa96ff56-7ca0-4045-9930-8145a1560cdc" />
+<img width="1751" height="1667" alt="Fillets on a wing root, nacelles, tail and canopy, shaded" src="docs/images/fillets-shaded.png" />
+<img width="1751" height="1667" alt="The same model in wireframe, with the fillets shaded" src="docs/images/fillets-wireframe.png" />
+<img width="1751" height="1667" alt="The same model with the fillets highlighted" src="docs/images/fillets-highlighted.png" />
 <p>
-  <img align="top" width="208" alt="image" src="https://github.com/user-attachments/assets/94c02a18-eb8f-4099-aa1b-9912b3b5ed55" />
-  <img align="top" width="302" alt="image" src="https://github.com/user-attachments/assets/3edbe99f-fc73-4a61-b16d-319a5c8f5455" />
+  <img align="top" width="208" alt="Adding a FILLET in the Geom Browser" src="docs/images/geom-browser-add-fillet.png" />
+  <img align="top" width="302" alt="The Fillet's Design tab" src="docs/images/fillet-design-tab.png" />
 </p>
 
 ## About OpenVSP
