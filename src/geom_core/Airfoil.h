@@ -357,11 +357,6 @@ public:
         return m_AirfoilName;
     }
 
-    virtual void SetAirfoilName( const string & name )
-    {
-        m_AirfoilName = name;
-    }
-
     virtual vector< vec3d > GetUpperPnts()
     {
         return m_UpperPnts;

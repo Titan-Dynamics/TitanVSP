@@ -412,7 +412,8 @@ extern void Update( bool update_managers = true );
 */
 /*!
     Fillet every wing into the fuselage its root is buried in.  Slim wing sections are inserted near each
-    junction, their airfoils pushed out by a rolling ball fillet that follows the fuselage's own curvature.
+    junction, each keeping the wing's own airfoil, scaled, thickened, shifted and pitched to approximate a
+    rolling ball fillet that follows the fuselage's own curvature.  The wing's planform is not changed.
     Fillets made by an earlier call are removed and rebuilt, so this may be called repeatedly.
     More sections give a smoother fillet at the cost of a heavier wing.
     \forcpponly
@@ -443,7 +444,7 @@ extern void Update( bool update_managers = true );
     \return Number of wings filleted
 */
 
-extern int BlendWingsAndFuselages( double radius = 0.0, int num_sections = 14 );
+extern int BlendWingsAndFuselages( double radius = 0.0, int num_sections = 10 );
 
 /*!
     \ingroup Vehicle

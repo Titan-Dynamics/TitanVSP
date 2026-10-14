@@ -256,6 +256,8 @@ public:
     {
         return m_UFeature;
     }
+    // Drop the u feature line at u, if there is one within tol of it.
+    void RemoveUFeature( double u, double tol = 1.0e-6 );
     vector < double > GetWFeature() const
     {
         return m_WFeature;

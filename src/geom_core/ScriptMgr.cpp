@@ -3960,7 +3960,7 @@ void ScriptMgrSingleton::RegisterAPI( asIScriptEngine* se )
     r = se->RegisterGlobalFunction( "void Update( bool update_managers = true)", asFUNCTION( vsp::Update ), asCALL_CDECL );
     assert( r >= 0 );
 
-    r = se->RegisterGlobalFunction( "int BlendWingsAndFuselages( double radius = 0.0, int num_sections = 14 )", asFUNCTION( vsp::BlendWingsAndFuselages ), asCALL_CDECL );
+    r = se->RegisterGlobalFunction( "int BlendWingsAndFuselages( double radius = 0.0, int num_sections = 10 )", asFUNCTION( vsp::BlendWingsAndFuselages ), asCALL_CDECL );
     assert( r >= 0 );
 
 

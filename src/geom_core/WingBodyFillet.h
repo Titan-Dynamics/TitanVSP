@@ -18,6 +18,7 @@ using std::vector;
 
 class Vehicle;
 class WingGeom;
+class WingSect;
 
 namespace WingBodyFillet
 {
@@ -25,7 +26,7 @@ namespace WingBodyFillet
     {
         double m_Radius = 0.0;          // Fillet radius in model units.  <= 0 uses m_RadiusFrac.
         double m_RadiusFrac = 0.08;     // Fillet radius as a fraction of the exposed root chord.
-        int m_NumSect = 14;             // Fillet sections inserted per wing.
+        int m_NumSect = 10;             // Fillet sections inserted per wing.
     };
 
     // Fillets every wing whose root is buried in a fuselage.  Fillets made by an earlier call are
@@ -36,6 +37,9 @@ namespace WingBodyFillet
     // Removes the fillet sections from a wing and restores the panels they were split from.
     // Returns true if anything was removed.
     bool RemoveFillets( WingGeom* wing );
+
+    // Was this section made by BlendAll?
+    bool IsFilletSection( WingSect* ws );
 }
 
 #endif // !defined(VSPWINGBODYFILLET__INCLUDED_)

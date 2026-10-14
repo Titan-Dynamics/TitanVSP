@@ -6,15 +6,18 @@
 // WingBodyFillet.cpp: Rolling ball fillets between wings and fuselages.
 //
 // A wing whose root is buried in a fuselage gets a run of slim sections inserted near the
-// junction.  Each one carries the wing's own airfoil at that station, pushed out along its
-// normal by the local height of the fillet.
+// junction.  Every one of them carries the wing's own airfoil -- same type, same parameters --
+// and the fillet is made only from what each section can do to that airfoil: grow it (Scale),
+// pull its LE forward (DeltaX), thicken it (T/C), lift or drop it (DeltaY) and pitch it (Theta).
+// Lofted together, the sections swell into the fuselage like a rolling ball fillet.
 //
-// The fillet is solved separately along each chordwise line of the wing.  Where that line leaves
-// the fuselage, a plane is set up from the wing's outboard tangent and its surface normal.  In
-// that plane a ball of radius R resting on the wing is rolled inboard until it meets the
-// fuselage; its arc between the two contact points is the fillet.  The fuselage is only ever
-// queried through true 3D distance to its surface, so the fillet follows its actual, doubly
-// curved shape, and the intersection itself varies along the chord as the fuselage does.
+// The target shape comes from a rolling ball fillet solved separately along each chordwise line
+// of the wing.  Where that line leaves the fuselage, a plane is set up from the wing's outboard
+// tangent and its surface normal.  In that plane a ball of radius R resting on the wing is rolled
+// inboard until it meets the fuselage; its arc between the two contact points is the fillet.  The
+// fuselage is only ever queried through true 3D distance to its surface, so the fillet follows its
+// actual, doubly curved shape, and the junction itself varies along the chord as the fuselage does.
+// Each section's airfoil controls are then fitted to that target by least squares.
 //
 //////////////////////////////////////////////////////////////////////
 
@@ -22,7 +25,9 @@
 
 #include "Airfoil.h"
 #include "APIDefines.h"
+#include "AttributeManager.h"
 #include "BndBox.h"
+#include "ParmMgr.h"
 #include "Vehicle.h"
 #include "WingGeom.h"
 #include "XSecSurf.h"
@@ -35,23 +40,17 @@
 namespace
 {
 
-// Name given to the airfoil of every fillet section, so they can be found and removed again.
-const char* FILLET_TAG = "VSP_WingBodyFillet";
+// Attribute marking a fillet section, so a later run can find and remove it.
+const char* FILLET_TAG = "WingBodyFillet";
 
 bool IsFilletSect( WingSect* ws )
 {
-    if ( !ws )
-    {
-        return false;
-    }
-    FileAirfoil* fa = dynamic_cast< FileAirfoil* >( ws->GetXSecCurve() );
-    return fa && fa->GetAirfoilName() == FILLET_TAG;
+    return ws && ws->GetAttrCollection()->FindPtr( FILLET_TAG ) != nullptr;
 }
 
-double SmoothStep( double x )
+void TagFilletSect( WingSect* ws )
 {
-    x = std::min( std::max( x, 0.0 ), 1.0 );
-    return x * x * ( 3.0 - 2.0 * x );
+    AttributeMgr.AddAttributeBool( ws->GetAttrCollection()->GetID(), FILLET_TAG, 1, false );
 }
 
 // Cosine spaced parameters across one airfoil, t in [0, 4]: lower surface TE -> LE over [0, 2],
@@ -450,8 +449,9 @@ void SolveProfile( SurfDist & fuse, double R, Profile & pr )
         // Undercut corner: the fuselage overhangs the wing and the ball touches it above its
         // centre.  Fill straight up from the arc's leftmost point to the fuselage rather than
         // leave a crevice under it -- to where it meets the fuselage, or comes closest to it
-        // when this line just grazes the fuselage's widest point.
-        const double hcap = 4.0 * R;
+        // when this line just grazes the fuselage's widest point.  Kept modest; a section can
+        // only swell so far before it stops looking like the wing's airfoil.
+        const double hcap = 1.5 * R;
         const double dh = 0.05 * R;
         vec3d base = pr.m_C + pr.m_S * s0;
         double hbest = h0;
@@ -488,9 +488,208 @@ void SolveProfile( SurfDist & fuse, double R, Profile & pr )
     pr.m_SEnd = astar;
 }
 
-//==== Split panel 'tip' at fractions fr, giving the new sections the airfoils up / low ====//
-void SplitPanel( WingGeom* wing, int tip, const vector< double > & fr,
-                 const vector< vector< vec3d > > & up, const vector< vector< vec3d > > & low )
+//==== One surface of an airfoil as y( x ), LE -> TE ====//
+class FoilHalf
+{
+public:
+    // pts run LE -> TE.  Points that double back in x (as an offset LE can) are dropped.
+    explicit FoilHalf( const vector< vec3d > & pts )
+    {
+        for ( const vec3d & p : pts )
+        {
+            if ( m_X.empty() || p.x() > m_X.back() + 1.0e-9 )
+            {
+                m_X.push_back( p.x() );
+                m_Y.push_back( p.y() );
+            }
+        }
+    }
+
+    double Y( double x ) const  { return Interp( m_X, m_Y, x ); }
+
+private:
+    vector< double > m_X, m_Y;
+};
+
+//==== What a fillet section does to its airfoil ====//
+// The airfoil is scaled by Scale and pitched by Theta, both about its TE, which therefore stays
+// exactly where it was -- the wing's TE runs on unbroken through the fillet.  Its thickness/chord
+// is multiplied by ThickRatio.  All in the unit chord frame of the section's own airfoil.
+struct SectFit
+{
+    double m_Scale = 1.0;
+    double m_Theta = 0.0;       // Degrees, positive drops the LE.
+    double m_ThickRatio = 1.0;
+    double m_TEx = 1.0;         // The TE the scaling and pitching are about.
+    double m_TEy = 0.0;
+};
+
+// Least squares fit of the airfoil controls to a target airfoil.  Both are sampled at the same
+// parameters tm (from AirfoilParams( mhalf )), in the unit chord frame of the original airfoil.
+SectFit FitSection( const vector< vec3d > & foil, const vector< vec3d > & target, int mhalf )
+{
+    SectFit fit;
+
+    auto halves = []( const vector< vec3d > & loop, int mh, vector< vec3d > & lo, vector< vec3d > & up )
+    {
+        for ( int i = mh; i >= 0; i-- )
+        {
+            lo.push_back( loop[i] );
+        }
+        for ( int i = mh; i <= 2 * mh; i++ )
+        {
+            up.push_back( loop[i] );
+        }
+    };
+    vector< vec3d > flo, fup, tlo, tup;
+    halves( foil, mhalf, flo, fup );
+    halves( target, mhalf, tlo, tup );
+    FoilHalf fl( flo ), fu( fup ), tl( tlo ), tu( tup );
+
+    const vec3d le = foil[mhalf];
+    const double te_x = 0.5 * ( foil.front().x() + foil.back().x() );
+    const double te_y = 0.5 * ( foil.front().y() + foil.back().y() );
+    const double c0 = te_x - le.x();
+    fit.m_TEx = te_x;
+    fit.m_TEy = te_y;
+    if ( c0 <= 0.0 )
+    {
+        return fit;
+    }
+
+    // The LE comes forward as far as the fillet pushes it; the TE stays put.
+    double dle = 0.0;
+    for ( size_t i = 0; i < foil.size(); i++ )
+    {
+        dle = std::min( dle, target[i].x() - foil[i].x() );
+    }
+    const double S = ( c0 - dle ) / c0;
+
+    // At matching chord fractions, compare camber and half thickness.  Scaled about the TE, the
+    // old camber line still needs pitching by theta to match; the old half thickness, scaling
+    // by k.  For small theta, pitching about the TE lifts a point w ahead of it by -theta * w.
+    const int n = 40;
+    double sww = 0, swr = 0, st_num = 0, st_den = 0;
+    for ( int i = 0; i < n; i++ )
+    {
+        double xi = 0.04 + 0.86 * i / ( n - 1.0 );
+        double xo = le.x() + xi * c0;
+        double xn = te_x + S * ( xo - te_x );
+
+        double yc0 = 0.5 * ( fu.Y( xo ) + fl.Y( xo ) );
+        double yt0 = 0.5 * ( fu.Y( xo ) - fl.Y( xo ) );
+        double tc = 0.5 * ( tu.Y( xn ) + tl.Y( xn ) );
+        double tt = 0.5 * ( tu.Y( xn ) - tl.Y( xn ) );
+
+        double w = xn - te_x;
+        double r = tc - te_y - S * ( yc0 - te_y );
+        sww += w * w;
+        swr += w * r;
+
+        st_num += tt * S * yt0;
+        st_den += S * yt0 * S * yt0;
+    }
+
+    fit.m_Scale = S;
+    fit.m_Theta = sww > 0.0 ? atan( swr / sww ) * 180.0 / M_PI : 0.0;
+    fit.m_ThickRatio = st_den > 0.0 ? std::min( std::max( st_num / st_den, 1.0 ), 4.0 ) : 1.0;
+    return fit;
+}
+
+// The fits come from one station at a time.  Make them into one smooth fillet: it may only
+// grow toward the fuselage, and the pitch is smoothed out along the span.  The innermost
+// station (buried) and the outermost (where the fillet has run out) are left as they are.
+void SmoothFits( vector< SectFit > & fits )
+{
+    const int n = (int)fits.size();
+    for ( int k = n - 2; k >= 0; k-- )
+    {
+        fits[k].m_Scale = std::max( fits[k].m_Scale, fits[k + 1].m_Scale );
+        fits[k].m_ThickRatio = std::max( fits[k].m_ThickRatio, fits[k + 1].m_ThickRatio );
+    }
+
+    const double max_theta = 6.0;
+    for ( SectFit & f : fits )
+    {
+        f.m_Theta = std::min( std::max( f.m_Theta, -max_theta ), max_theta );
+    }
+    for ( int pass = 0; pass < 3; pass++ )
+    {
+        vector< SectFit > prev = fits;
+        for ( int k = 1; k < n - 1; k++ )
+        {
+            fits[k].m_Theta = 0.25 * prev[k - 1].m_Theta + 0.5 * prev[k].m_Theta + 0.25 * prev[k + 1].m_Theta;
+            fits[k].m_Scale = 0.25 * prev[k - 1].m_Scale + 0.5 * prev[k].m_Scale + 0.25 * prev[k + 1].m_Scale;
+            fits[k].m_ThickRatio = 0.25 * prev[k - 1].m_ThickRatio + 0.5 * prev[k].m_ThickRatio + 0.25 * prev[k + 1].m_ThickRatio;
+        }
+    }
+}
+
+// Set the airfoil of 'dst' to that of the sections either side, blended to fraction f along the
+// panel between them.  Same airfoil type both sides: its numbers are blended.  Otherwise the
+// nearer side's airfoil is taken as is.
+void BlendAirfoil( WingSect* dst, WingSect* in, WingSect* out, double f )
+{
+    XSecCurve* dc = dst->GetXSecCurve();
+    XSecCurve* ic = in->GetXSecCurve();
+    XSecCurve* oc = out->GetXSecCurve();
+    if ( !dc || !ic || !oc || ic->GetType() != oc->GetType() || dc->GetType() != ic->GetType() )
+    {
+        return;
+    }
+
+    vector< string > ids;
+    dc->AddLinkableParms( ids );
+    for ( const string & id : ids )
+    {
+        Parm* p = ParmMgr.FindParm( id );
+        if ( !p || p->GetType() != vsp::PARM_DOUBLE_TYPE )
+        {
+            continue;
+        }
+        Parm* pi = ParmMgr.FindParm( ic->FindParm( p->GetName(), p->GetGroupName() ) );
+        Parm* po = ParmMgr.FindParm( oc->FindParm( p->GetName(), p->GetGroupName() ) );
+        if ( pi && po )
+        {
+            p->Set( pi->Get() + f * ( po->Get() - pi->Get() ) );
+        }
+    }
+}
+
+// Apply a fit on top of whatever the airfoil's own Scale / Delta / Theta already were.
+void ApplyFit( WingSect* ws, const SectFit & fit )
+{
+    XSecCurve* xsc = ws->GetXSecCurve();
+
+    // Scaling and pitching about the TE is Rot( th ) * S * old + D, with D = TE - Rot( th ) * S * TE.
+    // On top of the airfoil's own old = Rot( th0 ) * S0 * A + D0 that is
+    //     Rot( th + th0 ) * S * S0 * A + Rot( th ) * S * D0 + D
+    // XSecCurve's rotation, scale and shift are in that order, about the airfoil's origin.
+    double th = fit.m_Theta * M_PI / 180.0;
+    double ct = cos( th ), st = sin( th );
+    double S = fit.m_Scale;
+    double dx = fit.m_TEx - S * ( ct * fit.m_TEx - st * fit.m_TEy );
+    double dy = fit.m_TEy - S * ( st * fit.m_TEx + ct * fit.m_TEy );
+
+    double dx0 = xsc->m_DeltaX();
+    double dy0 = xsc->m_DeltaY();
+
+    xsc->m_Theta = xsc->m_Theta() + fit.m_Theta;
+    xsc->m_Scale = xsc->m_Scale() * S;
+    xsc->m_DeltaX = S * ( ct * dx0 - st * dy0 ) + dx;
+    xsc->m_DeltaY = S * ( st * dx0 + ct * dy0 ) + dy;
+
+    Airfoil* af = dynamic_cast< Airfoil* >( xsc );
+    if ( af )
+    {
+        af->m_ThickChord = af->m_ThickChord() * fit.m_ThickRatio;
+    }
+}
+
+//==== Split panel 'tip' at fractions fr, giving the new sections the fillets fits ====//
+// The planform is untouched: the new sections sit on the panel's own straight LE and TE, with
+// its chord, sweep, dihedral and twist.  Only their airfoils are reshaped.
+void SplitPanel( WingGeom* wing, int tip, const vector< double > & fr, const vector< SectFit > & fits )
 {
     XSecSurf* xss = wing->GetXSecSurf( 0 );
     WingSect* tws = wing->GetWingSect( tip );
@@ -503,54 +702,149 @@ void SplitPanel( WingGeom* wing, int tip, const vector< double > & fr,
     const double span = tws->m_Span();
     const double rc = tws->m_RootChord();
     const double tc = tws->m_TipChord();
-    const double sweep = tws->m_Sweep();
-    const double sweeploc = tws->m_SweepLoc();
-    const double secsweeploc = tws->m_SecSweepLoc();
     const double dihed = tws->m_Dihedral();
     const double twist = tws->m_Twist();
-    const double twistloc = tws->m_TwistLoc();
     const double twist_in = rws->m_Twist();
-    const bool rotmatch = tws->m_RotateMatchDiedralFlag();
-    const bool twistxz = tws->m_TwistInXZPlaneFlag();
     const bool reldihed = wing->m_RelativeDihedralFlag();
     const bool reltwist = wing->m_RelativeTwistFlag();
 
+    // Each new section starts as a copy of the nearer end of the panel, airfoil type and all.
+    // Sections tip .. tip+m-1 are new; the original tip section ends up at tip+m.
     const int m = (int)fr.size();
     for ( int i = 0; i < m; i++ )
     {
-        xss->InsertXSec( vsp::XS_FILE_AIRFOIL, tip - 1 + i );
+        WingSect* src = fr[i] < 0.5 ? rws : tws;
+        xss->InsertXSec( src->GetXSecCurve()->GetType(), tip - 1 + i );
+        WingSect* ws = wing->GetWingSect( tip + i );
+        ws->CopyFrom( src );
+        BlendAirfoil( ws, rws, tws, fr[i] );
+        TagFilletSect( ws );
     }
 
-    // Sections tip .. tip+m-1 are new; the original tip section is now tip+m.  A panel is
-    // straight, so sweep at a given chord fraction is the same along all of it.
+    // A panel is straight, so sweep at a given chord fraction is the same along all of it.
     for ( int i = 0; i <= m; i++ )
     {
         WingSect* ws = wing->GetWingSect( tip + i );
         double f0 = ( i == 0 ) ? 0.0 : fr[i - 1];
         double f1 = ( i == m ) ? 1.0 : fr[i];
 
-        ws->m_Sweep = sweep;
-        // These two may not be equal, so whichever goes first could clash with the other's old value.
-        ws->m_SweepLoc.Set( sweeploc );
-        ws->m_SecSweepLoc.Set( secsweeploc );
-        ws->m_SweepLoc.Set( sweeploc );
+        if ( i < m )
+        {
+            // These two may not be equal, so whichever goes first could clash with the other's
+            // old value.
+            ws->m_SweepLoc.Set( tws->m_SweepLoc() );
+            ws->m_SecSweepLoc.Set( tws->m_SecSweepLoc() );
+            ws->m_SweepLoc.Set( tws->m_SweepLoc() );
+            ws->m_Sweep = tws->m_Sweep();
+            ws->m_TwistLoc = tws->m_TwistLoc();
+            ws->m_RotateMatchDiedralFlag = tws->m_RotateMatchDiedralFlag();
+            ws->m_TwistInXZPlaneFlag = tws->m_TwistInXZPlaneFlag();
+        }
         ws->m_Dihedral = ( reldihed && i > 0 ) ? 0.0 : dihed;
         ws->m_Twist = reltwist ? twist * ( f1 - f0 ) : twist_in + ( twist - twist_in ) * f1;
-        ws->m_TwistLoc = twistloc;
-        ws->m_RotateMatchDiedralFlag = rotmatch;
-        ws->m_TwistInXZPlaneFlag = twistxz;
         ws->ForceSpanRcTc( span * ( f1 - f0 ), rc + ( tc - rc ) * f0, rc + ( tc - rc ) * f1 );
 
         if ( i < m )
         {
-            FileAirfoil* fa = dynamic_cast< FileAirfoil* >( ws->GetXSecCurve() );
-            if ( fa )
-            {
-                fa->SetAirfoilName( FILLET_TAG );
-                fa->SetAirfoilPnts( up[i], low[i] );
-            }
+            ApplyFit( ws, fits[i] );
         }
     }
+}
+
+// The blend angles ( theta, phi ) at airfoil parameter t of a section that point its blend
+// tangent along d.  Solved numerically, as XSec only gives the forward map.
+bool SolveTangentAngles( WingSect* ws, double t, const vec3d & d, double & th, double & ph )
+{
+    vec3d tan, nrm, ta, tb;
+    th = 0.0;
+    ph = 0.0;
+    ws->GetTanNormVec( t, th, ph, tan, nrm );
+    if ( dot( tan, d ) < 0.0 )
+    {
+        th = M_PI;
+    }
+
+    for ( int it = 0; it < 40; it++ )
+    {
+        ws->GetTanNormVec( t, th, ph, tan, nrm );
+        vec3d r = tan - d;
+        if ( r.mag() < 1.0e-10 )
+        {
+            break;
+        }
+
+        const double h = 1.0e-6;
+        ws->GetTanNormVec( t, th + h, ph, ta, nrm );
+        ws->GetTanNormVec( t, th, ph + h, tb, nrm );
+        vec3d ja = ( ta - tan ) / h;
+        vec3d jb = ( tb - tan ) / h;
+
+        double a11 = dot( ja, ja ), a12 = dot( ja, jb ), a22 = dot( jb, jb );
+        double b1 = -dot( ja, r ), b2 = -dot( jb, r );
+        double det = a11 * a22 - a12 * a12;
+        if ( fabs( det ) < 1.0e-14 )
+        {
+            return false;
+        }
+        double dth = ( b1 * a22 - b2 * a12 ) / det;
+        double dph = ( a11 * b2 - a12 * b1 ) / det;
+        double step = std::max( fabs( dth ), fabs( dph ) );
+        if ( step > 0.3 )
+        {
+            dth *= 0.3 / step;
+            dph *= 0.3 / step;
+        }
+        th += dth;
+        ph += dph;
+    }
+
+    ws->GetTanNormVec( t, th, ph, tan, nrm );
+    return dot( tan, d ) > 0.9999;
+}
+
+// Run the LE through the fillet sections as one smooth curve instead of straight segments: each
+// fillet section blends its LE along the line from its inboard to its outboard neighbor.  Where
+// the fillet runs out into the plain wing, it leaves along the plain LE, which stays straight.
+// The TE needs nothing; the fillet never moves it off the wing's own TE line.
+void SmoothLE( WingGeom* wing )
+{
+    const int n = wing->NumXSec();
+    vector< vec3d > le( n );
+    for ( int i = 0; i < n; i++ )
+    {
+        le[i] = wing->GetWingSect( i )->GetCurve().CompPnt( 2.0 );
+    }
+
+    for ( int i = 1; i < n - 1; i++ )
+    {
+        WingSect* ws = wing->GetWingSect( i );
+        if ( !IsFilletSect( ws ) )
+        {
+            continue;
+        }
+
+        vec3d d = IsFilletSect( wing->GetWingSect( i + 1 ) ) ? le[i + 1] - le[i - 1] : le[i + 1] - le[i];
+        d.normalize();
+
+        double th, ph;
+        if ( !SolveTangentAngles( ws, 2.0, d, th, ph ) )
+        {
+            continue;
+        }
+
+        // GetJoints feeds the inboard side ( -sweep, -dihedral ) and the outboard ( -sweep, +dihedral ).
+        ws->m_InLEMode = vsp::BLEND_ANGLES;
+        ws->m_OutLEMode = vsp::BLEND_ANGLES;
+        ws->m_InLESweep = -th * 180.0 / M_PI;
+        ws->m_InLEDihedral = -ph * 180.0 / M_PI;
+        ws->m_OutLESweep = -th * 180.0 / M_PI;
+        ws->m_OutLEDihedral = ph * 180.0 / M_PI;
+        ws->m_InLEStrength = 1.0;
+        ws->m_OutLEStrength = 1.0;
+    }
+
+    wing->m_SurfDirty = true;
+    wing->Update();
 }
 
 // Fraction of the wing's root chord points buried in geom.
@@ -645,12 +939,53 @@ bool FilletWing( WingGeom* wing, Geom* fuse, const WingBodyFillet::Settings & se
         return false;
     }
 
-    // Stations clustered inboard, where the fillet turns up the side of the fuselage.
+    // Fillet height along every chord line at span u.
+    auto heights = [&]( double u )
+    {
+        vector< double > hj( tj.size(), 0.0 );
+        for ( size_t j = 0; j < tj.size(); j++ )
+        {
+            const Profile & p = prof[j];
+            if ( p.m_Valid )
+            {
+                hj[j] = p.Height( dot( we.Pnt( u, tj[j] ) - p.m_C, p.m_S ) );
+            }
+        }
+        return hj;
+    };
+
+    // Place the stations where the fillet changes shape.  How much it changes is summed over
+    // every chord line, so a fillet that rolls up the fuselage further out on one surface than
+    // the other still gets its sections where each one curves.  The first station holds the
+    // fillet at full size, buried in the fuselage; the last is where it has run out.
+    const int nfine = 400;
+    vector< double > ufine( nfine ), cum( nfine, 0.0 );
+    vector< double > hprev = heights( u0 );
+    ufine[0] = u0;
+    for ( int i = 1; i < nfine; i++ )
+    {
+        ufine[i] = u0 + ( u1 - u0 ) * i / ( nfine - 1.0 );
+        vector< double > h = heights( ufine[i] );
+        double var = 0.0;
+        for ( size_t j = 0; j < h.size(); j++ )
+        {
+            var += fabs( h[j] - hprev[j] );
+        }
+        cum[i] = cum[i - 1] + var;
+        hprev = h;
+    }
+    // A little even spacing too, so no stretch of the fillet goes without a section.
+    const double even = 0.1 * cum.back() / ( nfine - 1.0 ) + 1.0e-12;
+    for ( int i = 1; i < nfine; i++ )
+    {
+        cum[i] += even * i;
+    }
+
     const int ns = std::max( settings.m_NumSect, 2 );
     vector< double > uk;
     for ( int k = 0; k < ns; k++ )
     {
-        double u = u0 + ( u1 - u0 ) * ( 1.0 - cos( 0.5 * M_PI * k / ( ns - 1 ) ) );
+        double u = Interp( cum, ufine, cum.back() * k / ( ns - 1.0 ) );
 
         // Stay off existing sections.
         double r = std::round( u );
@@ -664,8 +999,8 @@ bool FilletWing( WingGeom* wing, Geom* fuse, const WingBodyFillet::Settings & se
         }
     }
 
-    // Every airfoil the new sections are interpolated from must be a real airfoil, so the unit
-    // chord frame is the one FileAirfoil uses.
+    // Every airfoil the new sections are made from must be a real airfoil, whose unit chord frame
+    // the fit works in.
     int sfirst = (int)std::floor( uk.front() );
     int slast = std::min( (int)std::floor( uk.back() ) + 1, wing->NumXSec() - 1 );
     for ( int i = sfirst; i <= slast; i++ )
@@ -677,51 +1012,25 @@ bool FilletWing( WingGeom* wing, Geom* fuse, const WingBodyFillet::Settings & se
         }
     }
 
-    //==== Airfoil for each station, from the unmodified wing ====//
+    //==== Fit each station's airfoil controls to its fillet, from the unmodified wing ====//
     const int mhalf = 60;
     vector< double > tm = AirfoilParams( mhalf );
-    const double te_fade = 0.8;     // Fillet fades to nothing between here and the TE.
 
-    vector< vector< vec3d > > up( uk.size() ), low( uk.size() );
+    vector< SectFit > fits( uk.size() );
     for ( size_t k = 0; k < uk.size(); k++ )
     {
         double u = uk[k];
-
-        vector< double > hj( tj.size(), 0.0 );
-        for ( size_t j = 0; j < tj.size(); j++ )
-        {
-            const Profile & p = prof[j];
-            if ( p.m_Valid )
-            {
-                hj[j] = p.Height( dot( we.Pnt( u, tj[j] ) - p.m_C, p.m_S ) );
-            }
-        }
-
+        vector< double > hj = heights( u );
         double chord = we.Chord( u );
-        vec3d le = we.Foil( u, 2.0 );
-        vec3d te = we.Foil( u, 0.0 );
-        double xlen = te.x() - le.x();
-
-        vector< vec3d > q( tm.size() );
+        vector< vec3d > foil( tm.size() ), target( tm.size() );
         for ( size_t i = 0; i < tm.size(); i++ )
         {
-            vec3d f = we.Foil( u, tm[i] );
-            double xr = ( f.x() - le.x() ) / xlen;
-            double h = Interp( tj, hj, tm[i] ) * SmoothStep( ( 1.0 - xr ) / ( 1.0 - te_fade ) );
-            q[i] = f + we.FoilNormal( u, tm[i] ) * ( h / chord );
-            q[i].set_z( 0.0 );
+            foil[i] = we.Foil( u, tm[i] );
+            target[i] = foil[i] + we.FoilNormal( u, tm[i] ) * ( Interp( tj, hj, tm[i] ) / chord );
         }
-
-        // FileAirfoil wants both surfaces listed LE -> TE, sharing the LE point.
-        for ( int i = mhalf; i >= 0; i-- )
-        {
-            low[k].push_back( q[i] );
-        }
-        for ( int i = mhalf; i <= 2 * mhalf; i++ )
-        {
-            up[k].push_back( q[i] );
-        }
+        fits[k] = FitSection( foil, target, mhalf );
     }
+    SmoothFits( fits );
 
     //==== Insert the sections, outboard panels first so inboard indices hold ====//
     std::map< int, vector< int > > by_panel;
@@ -733,21 +1042,23 @@ bool FilletWing( WingGeom* wing, Geom* fuse, const WingBodyFillet::Settings & se
     {
         int panel = it->first;
         vector< double > fr;
-        vector< vector< vec3d > > pup, plow;
+        vector< SectFit > pfits;
         for ( int k : it->second )
         {
             fr.push_back( uk[k] - panel );
-            pup.push_back( up[k] );
-            plow.push_back( low[k] );
+            pfits.push_back( fits[k] );
         }
-        SplitPanel( wing, panel + 1, fr, pup, plow );
+        SplitPanel( wing, panel + 1, fr, pfits );
     }
 
     wing->m_SurfDirty = true;
     wing->Update();
+    SmoothLE( wing );
 
-    char buf[128];
-    snprintf( buf, sizeof( buf ), "%d sections, radius %g", (int)uk.size(), R );
+    const SectFit & big = fits.front();
+    char buf[160];
+    snprintf( buf, sizeof( buf ), "%d sections, radius %g; innermost airfoil x%.2f chord, x%.2f thickness",
+              (int)uk.size(), R, big.m_Scale, big.m_Scale * big.m_ThickRatio );
     msg = buf;
     return true;
 }
@@ -756,6 +1067,11 @@ bool FilletWing( WingGeom* wing, Geom* fuse, const WingBodyFillet::Settings & se
 
 namespace WingBodyFillet
 {
+
+bool IsFilletSection( WingSect* ws )
+{
+    return IsFilletSect( ws );
+}
 
 bool RemoveFillets( WingGeom* wing )
 {
