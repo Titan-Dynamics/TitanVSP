@@ -12,7 +12,6 @@
 #include "Vehicle.h"
 #include "StlHelper.h"
 #include "Cluster.h"
-#include "WingBodyFillet.h"
 
 using namespace vsp;
 
@@ -1747,35 +1746,6 @@ void WingGeom::InsertWingSect( int index  )
         string ins_id = m_XSecSurf.InsertXSec(type, index);
         m_ActiveWingSection = index + 1;
         PasteWingSect( m_ActiveWingSection() );
-    }
-}
-
-//==== Feature Lines ====//
-// Sections a fillet is built from are there to shape it, not to be seen, so they get no feature
-// line; the fillet then reads as one surface.
-void WingGeom::UpdateFeatureLines()
-{
-    Geom::UpdateFeatureLines();
-
-    if ( m_MainSurfVec.empty() )
-    {
-        return;
-    }
-
-    // Section i lies i sections in from the tip end of the surface, short of any tip cap.
-    int nxsec = m_XSecSurf.NumXSec();
-    double utip = m_MainSurfVec[0].GetUMax();
-    if ( !m_CapUMaxSuccess.empty() && m_CapUMaxSuccess[0] )
-    {
-        utip -= 1.0;
-    }
-
-    for ( int i = 1; i < nxsec - 1; i++ )
-    {
-        if ( WingBodyFillet::IsFilletSection( GetWingSect( i ) ) )
-        {
-            m_MainSurfVec[0].RemoveUFeature( utip - ( nxsec - 1 - i ), 1.0e-3 );
-        }
     }
 }
 

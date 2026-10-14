@@ -1700,6 +1700,8 @@ void ScriptMgrSingleton::RegisterEnums( asIScriptEngine* se )
     assert( r >= 0 );
     r = se->RegisterEnumValue( "GUI_GEOM_SCREEN", "CLONE_GEOM_SCREEN", CLONE_GEOM_SCREEN );
     assert( r >= 0 );
+    r = se->RegisterEnumValue( "GUI_GEOM_SCREEN", "FILLET_GEOM_SCREEN", FILLET_GEOM_SCREEN );
+    assert( r >= 0 );
     r = se->RegisterEnumValue( "GUI_GEOM_SCREEN", "NUM_GEOM_SCREENS", NUM_GEOM_SCREENS );
     assert( r >= 0 );
     r = se->RegisterEnumValue( "GUI_GEOM_SCREEN", "ALL_GEOM_SCREENS", ALL_GEOM_SCREENS );
@@ -3958,9 +3960,6 @@ void ScriptMgrSingleton::RegisterAPI( asIScriptEngine* se )
     assert( r >= 0 );
 
     r = se->RegisterGlobalFunction( "void Update( bool update_managers = true)", asFUNCTION( vsp::Update ), asCALL_CDECL );
-    assert( r >= 0 );
-
-    r = se->RegisterGlobalFunction( "int BlendWingsAndFuselages( double radius = 0.0, int num_sections = 10 )", asFUNCTION( vsp::BlendWingsAndFuselages ), asCALL_CDECL );
     assert( r >= 0 );
 
 

@@ -52,6 +52,7 @@ DegenGeom.cpp
 DesignVarMgr.cpp
 EllipsoidGeom.cpp
 FeaStructure.cpp
+FilletGeom.cpp
 FitModelMgr.cpp
 FuselageGeom.cpp
 GearGeom.cpp
@@ -91,7 +92,6 @@ RoutingGeom.cpp
 ScriptMgr.cpp
 SnapTo.cpp
 StackGeom.cpp
-WingBodyFillet.cpp
 StructureMgr.cpp
 SubSurface.cpp
 SubSurfaceMgr.cpp
@@ -140,6 +140,7 @@ DegenGeom.h
 DesignVarMgr.h
 EllipsoidGeom.h
 FeaStructure.h
+FilletGeom.h
 FemaleGeomDataReduced.h
 FitModelMgr.h
 FuselageGeom.h
@@ -183,7 +184,6 @@ RoutingGeom.h
 ScriptMgr.h
 SnapTo.h
 StackGeom.h
-WingBodyFillet.h
 StructureMgr.h
 SubSurface.h
 SubSurfaceMgr.h

@@ -3035,18 +3035,6 @@ void VspSurf::BuildSimpleFeatureLines()
     m_Surface.get_pmap_uv( m_UFeature, m_WFeature );
 }
 
-void VspSurf::RemoveUFeature( double u, double tol )
-{
-    for ( auto it = m_UFeature.begin(); it != m_UFeature.end(); ++it )
-    {
-        if ( std::abs( *it - u ) <= tol )
-        {
-            m_UFeature.erase( it );
-            return;
-        }
-    }
-}
-
 void VspSurf::BuildFeatureLines( bool force_xsec_flag)
 {
     if ( m_Surface.number_u_patches() > 0 && m_Surface.number_v_patches() > 0 )

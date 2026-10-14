@@ -27,16 +27,11 @@
 #include "Viewport.h"
 #include "Background.h"
 #include <FL/fl_ask.H>
-#include <FL/Fl_Button.H>
-#include <FL/Fl_Return_Button.H>
-#include <FL/Fl_Value_Input.H>
-#include <FL/Fl_Window.H>
 #include "CloneDeleteDialog.h"
 #include "ManageCORScreen.h"
 #include "ManageGeomScreen.h"
 #include "ManageViewScreen.h"
 #include "FileUtil.h"
-#include "WingBodyFillet.h"
 
 #include "CfdMeshScreen.h"
 #include "GeometryAnalysisScreen.h"
@@ -167,7 +162,6 @@ MainVSPScreen::MainVSPScreen( ScreenMgr* mgr ) : ActionScreen( mgr )
     m_VehNotesMenuItem.Init( mgr, m_MenuBar, "Model/Vehicle Notes...", vsp::VSP_VEH_NOTES_SCREEN );
     m_FitModelMenuItem.Init( mgr, m_MenuBar, "Model/Fit Model...", vsp::VSP_FIT_MODEL_SCREEN );
     m_SnapToMenuItem.Init( mgr, m_MenuBar, "Model/Snap To...", vsp::VSP_SNAP_TO_SCREEN );
-    m_BlendWingFuseMenuItem.Init( this, m_MenuBar, "Model/Blend Wings to Fuselages..." );
 
     m_CompGeomMenuItem.Init( mgr, m_MenuBar, "Analysis/CompGeom...", vsp::VSP_COMP_GEOM_SCREEN );
     m_PSliceMenuItem.Init( mgr, m_MenuBar, "Analysis/Planar Slice...", vsp::VSP_PSLICE_SCREEN );
@@ -432,57 +426,6 @@ void MainVSPScreen::ExitVSP()
     }
 }
 
-// Ask for the fillet radius and the number of fillet sections.  Returns false if cancelled.
-static bool AskBlendSettings( WingBodyFillet::Settings & settings )
-{
-    Fl_Window win( 360, 165, "Blend Wings to Fuselages" );
-
-    Fl_Value_Input radius( 170, 15, 170, 25, "Fillet radius" );
-    radius.minimum( 0.0 );
-    radius.maximum( 1.0e12 );
-    radius.value( std::max( settings.m_Radius, 0.0 ) );
-    Fl_Box radius_hint( 170, 40, 170, 20, "0 = 8% of each root chord" );
-    radius_hint.labelsize( 11 );
-    radius_hint.align( FL_ALIGN_LEFT | FL_ALIGN_INSIDE );
-
-    Fl_Value_Input nsect( 170, 70, 170, 25, "Sections (resolution)" );
-    nsect.minimum( 2 );
-    nsect.maximum( 200 );
-    nsect.step( 1 );
-    nsect.value( settings.m_NumSect );
-    Fl_Box nsect_hint( 170, 95, 170, 20, "More is smoother, but heavier" );
-    nsect_hint.labelsize( 11 );
-    nsect_hint.align( FL_ALIGN_LEFT | FL_ALIGN_INSIDE );
-
-    Fl_Return_Button ok( 170, 127, 80, 28, "Blend" );
-    Fl_Button cancel( 260, 127, 80, 28, "Cancel" );
-
-    win.end();
-    win.set_modal();
-    win.show();
-
-    while ( win.shown() )
-    {
-        Fl::wait();
-        for ( Fl_Widget* w = Fl::readqueue(); w; w = Fl::readqueue() )
-        {
-            if ( w == &ok )
-            {
-                settings.m_Radius = std::max( radius.value(), 0.0 );
-                settings.m_NumSect = std::min( std::max( (int)std::lround( nsect.value() ), 2 ), 200 );
-                win.hide();
-                return true;
-            }
-            if ( w == &cancel || w == &win )
-            {
-                win.hide();
-                return false;
-            }
-        }
-    }
-    return false;
-}
-
 void MainVSPScreen::ActionCB( void * data )
 {
     if ( !m_GlWin || !m_FLTK_Window || !m_ScreenMgr )
@@ -603,26 +546,6 @@ void MainVSPScreen::ActionCB( void * data )
     else if ( data == &m_DeleteMenuItem )
     {
         DeleteOrCutActiveGeomVec( VehicleMgr.GetVehicle(), false );
-    }
-    else if ( data == &m_BlendWingFuseMenuItem )
-    {
-        // Remembered between uses within a session.
-        static WingBodyFillet::Settings settings;
-        if ( !AskBlendSettings( settings ) )
-        {
-            return;
-        }
-
-        vector< string > messages;
-        WingBodyFillet::BlendAll( VehicleMgr.GetVehicle(), messages, settings );
-        m_ScreenMgr->SetUpdateFlag( true );
-
-        string report;
-        for ( const string & m : messages )
-        {
-            report += m + "\n";
-        }
-        fl_message( "%s", report.c_str() );
     }
     else if ( data == &m_SelAllMenuItem )
     {

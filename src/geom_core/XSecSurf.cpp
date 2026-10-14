@@ -330,28 +330,13 @@ void XSecSurf::CutXSec( int index )
         return;
     }
 
-    if ( !FindXSec( index ) )
-    {
-        return;
-    }
-
-    CopyXSec( index );
-    DeleteXSec( index );
-}
-
-//==== Delete XSec Without Copying It ====//
-void XSecSurf::DeleteXSec( int index )
-{
-    if ( (int)m_XSecIDVec.size() <= m_CutMinNumXSecs )
-    {
-        return;
-    }
-
     XSec* xs = FindXSec( index );
     if ( !xs )
     {
         return;
     }
+
+    CopyXSec( index );
 
     vector_remove_val( m_XSecPtrVec, xs );
     m_XSecIDVec.erase( m_XSecIDVec.begin() + index );

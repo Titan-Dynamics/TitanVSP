@@ -51,6 +51,7 @@ DegenGeomScreen.cpp
 DesignVarScreen.cpp
 DXFOptionsScreen.cpp
 EllipsoidScreen.cpp
+FilletScreen.cpp
 ExportScreen.cpp
 FeaPartEditScreen.cpp
 FitModelScreen.cpp
@@ -150,6 +151,7 @@ DesignVarScreen.h
 DXFOptionsScreen.h
 ExportScreen.h
 EllipsoidScreen.h
+FilletScreen.h
 FeaPartEditScreen.h
 FitModelScreen.h
 FuselageScreen.h

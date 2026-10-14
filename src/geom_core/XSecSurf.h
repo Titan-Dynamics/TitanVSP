@@ -38,7 +38,6 @@ public:
     string AddXSec( int type );
     string AddXSecCopy( XSec* xs );
     void CutXSec( int index );
-    void DeleteXSec( int index );   // Like CutXSec, but leaves the clipboard alone.
     void SetCutMinNumXSecs( int num )                { m_CutMinNumXSecs = num; }
     void CopyXSec( int index );
     void PasteXSec( int index );

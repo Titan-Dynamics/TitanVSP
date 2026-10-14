@@ -2561,6 +2561,12 @@ void Geom::UpdateChildren( bool fullupdate )
                 child->m_XFormDirty = true;
             }
 
+            // A Fillet is built from this Geom's surface, wherever it is.
+            if ( child->GetType().m_Type == FILLET_GEOM_TYPE && ( m_UpdateXForm || m_UpdateSurf ) )
+            {
+                child->m_SurfDirty = true;
+            }
+
             // If the child is an Auxiliary
             if ( child->GetBehaviorType() == AUXILIARY_GEOM_TYPE )
             {
@@ -2661,6 +2667,12 @@ void Geom::UpdateStepChildren( bool fullupdate )
                 {
                     child->m_SubSurfDirty = true;
                 }
+            }
+
+            // A Fillet blends into this Geom, so it rebuilds whenever this one moves or changes.
+            if ( child->GetType().m_Type == FILLET_GEOM_TYPE && ( m_UpdateXForm || m_UpdateSurf ) )
+            {
+                child->m_SurfDirty = true;
             }
 
             if ( child->GetBehaviorType() == GEAR_GEOM_TYPE )

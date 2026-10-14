@@ -151,7 +151,6 @@ protected:
     ScreenMenuItem m_UserParmMenuItem;
     ScreenMenuItem m_FitModelMenuItem;
     ScreenMenuItem m_SnapToMenuItem;
-    ActionMenuItem m_BlendWingFuseMenuItem;
     ScreenMenuItem m_AttributeMenuItem;
     ScreenMenuItem m_VehNotesMenuItem;
 

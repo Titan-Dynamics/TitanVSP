@@ -32,6 +32,7 @@
 #include "DXFUtil.h"
 #include "EllipsoidGeom.h"
 #include "FileUtil.h"
+#include "FilletGeom.h"
 #include "FitModelMgr.h"
 #include "FuselageGeom.h"
 #include "HingeGeom.h"
@@ -452,6 +453,7 @@ void Vehicle::Init()
     m_GeomTypeVec.push_back( GeomType( AUXILIARY_GEOM_TYPE, "AUXILIARY", true ) );
     m_GeomTypeVec.push_back( GeomType( COBRA_GEOM_TYPE, "COBRA", true ) );
     m_GeomTypeVec.push_back( GeomType( CLONE_GEOM_TYPE, "CLONE", true ) );
+    m_GeomTypeVec.push_back( GeomType( FILLET_GEOM_TYPE, "FILLET", true ) );
 
     //==== Get Custom Geom Types =====//
     vector< GeomType > custom_types = CustomGeomMgr.GetCustomTypes();
@@ -1159,6 +1161,10 @@ string Vehicle::CreateGeom( const GeomType & type )
     {
         new_geom = new CloneGeom( this );
     }
+    else if ( type.m_Name == "Fillet" || type.m_Name == "FILLET" )
+    {
+        new_geom = new FilletGeom( this );
+    }
 
     if ( !new_geom )
     {
@@ -1222,6 +1228,23 @@ string Vehicle::AddGeom( const GeomType & type )
                 return "NONE";
             }
 
+        }
+        //==== A Fillet Blends A Wing Into A Fuselage, So It Must Hang Off A Wing ====//
+        else if ( type.m_Type == FILLET_GEOM_TYPE )
+        {
+            Geom* par = FindGeom( add_geom->GetParentID() );
+            if ( !par || par->GetType().m_Type != MS_WING_GEOM_TYPE )
+            {
+                MessageData errMsgData;
+                errMsgData.m_String = "Error";
+                errMsgData.m_IntVec.push_back( vsp::VSP_INVALID_TYPE );
+                errMsgData.m_StringVec.push_back( string( "Error:  A Fillet must be added to a wing.  Select the wing first." ) );
+
+                MessageMgr::getInstance().SendAll( errMsgData );
+
+                DeleteGeomVec( { geom_id } );
+                return "NONE";
+            }
         }
 
         add_geom->Update();

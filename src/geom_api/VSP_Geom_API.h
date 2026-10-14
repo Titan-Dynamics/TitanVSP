@@ -408,45 +408,6 @@ extern void VSPRenew();
 extern void Update( bool update_managers = true );
 
 /*!
-    \ingroup Geom
-*/
-/*!
-    Fillet every wing into the fuselage its root is buried in.  Slim wing sections are inserted near each
-    junction, each keeping the wing's own airfoil, scaled, thickened, shifted and pitched to approximate a
-    rolling ball fillet that follows the fuselage's own curvature.  The wing's planform is not changed.
-    Fillets made by an earlier call are removed and rebuilt, so this may be called repeatedly.
-    More sections give a smoother fillet at the cost of a heavier wing.
-    \forcpponly
-    \code{.cpp}
-    string fid = AddGeom( "FUSELAGE" );
-    string wid = AddGeom( "WING" );
-    SetParmVal( wid, "X_Rel_Location", "XForm", 10.0 );
-
-    Update();
-
-    if ( BlendWingsAndFuselages() != 1 ) { Print( "ERROR: BlendWingsAndFuselages" ); __failure++; }
-    \endcode
-    \endforcpponly
-    \beginPythonOnly
-    \code{.py}
-    fid = AddGeom( "FUSELAGE" )
-    wid = AddGeom( "WING" )
-    SetParmVal( wid, "X_Rel_Location", "XForm", 10.0 )
-
-    Update()
-
-    assert BlendWingsAndFuselages() == 1, "ERROR: BlendWingsAndFuselages"
-
-    \endcode
-    \endPythonOnly
-    \param [in] radius double Fillet radius in model units; 0 picks 8% of each wing's exposed root chord
-    \param [in] num_sections int Number of fillet sections inserted per wing (at least 2)
-    \return Number of wings filleted
-*/
-
-extern int BlendWingsAndFuselages( double radius = 0.0, int num_sections = 10 );
-
-/*!
     \ingroup Vehicle
 */
 /*!

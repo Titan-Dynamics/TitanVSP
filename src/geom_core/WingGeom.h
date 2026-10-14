@@ -238,9 +238,6 @@ public:
     virtual double UtoEta( const double &u, bool ignoreCap = false );
     virtual double EtatoU( const double &eta, bool ignoreCap = false );
 
-    // Unit chord airfoils lofted linearly between sections; u is the section index.
-    const VspSurf & GetFoilSurf() const                   { return m_FoilSurf; }
-
     //==== Planform Parms ====//
     Parm m_TotalSpan;
     Parm m_TotalProjSpan;
@@ -278,7 +275,6 @@ protected:
 
     virtual void ChangeID( const string &id );
     virtual void UpdateSurf();
-    virtual void UpdateFeatureLines();
     virtual void GetUWTess( const VspSurf &surf, bool capUMinSuccess, bool capUMaxSuccess, bool degen, vector< double > &utess, vector< double > &vtess, const int & n_ref = 0 ) const;
     virtual void UpdateTesselate( const VspSurf &surf, bool capUMinSuccess, bool capUMaxSuccess, bool degen, vector< vector< vec3d > > &pnts, vector< vector< vec3d > > &norms, vector< vector< vec3d > > &uw_pnts, const int & n_ref = 0  ) const;
     virtual void UpdateSplitTesselate( const VspSurf &surf, bool capUMinSuccess, bool capUMaxSuccess, vector< vector< vector< vec3d > > > &pnts, vector< vector< vector< vec3d > > > &norms ) const;
