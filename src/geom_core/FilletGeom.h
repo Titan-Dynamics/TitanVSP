@@ -39,6 +39,8 @@ public:
     IntParm m_NumStations;      // Cross-sections around the junction.
     Parm m_TETaper;             // Fraction of each side of the junction over which the
                                 // radius tapers to nothing at the trailing edge.
+    Parm m_Sink;                // How far the fillet's edges run on into the wing and fuselage,
+                                // so no sliver of gap opens along the lines where it meets them.
 
 protected:
     virtual void UpdateSurf();

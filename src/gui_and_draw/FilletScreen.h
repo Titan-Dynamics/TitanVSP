@@ -34,6 +34,7 @@ protected:
     SliderAdjRangeInput m_RadiusSlider;
     SliderAdjRangeInput m_NumStationsSlider;
     SliderAdjRangeInput m_TETaperSlider;
+    SliderAdjRangeInput m_SinkSlider;
 };
 
 #endif // !defined(FILLET_SCREEN__INCLUDED_)

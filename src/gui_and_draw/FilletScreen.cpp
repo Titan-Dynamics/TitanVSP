@@ -25,6 +25,7 @@ FilletScreen::FilletScreen( ScreenMgr* mgr ) : GeomScreen( mgr, 400, 800, "Fille
     m_DesignLayout.AddSlider( m_RadiusSlider, "Radius", 10, "%7.3f" );
     m_DesignLayout.AddSlider( m_NumStationsSlider, "Stations", 100, "%5.0f" );
     m_DesignLayout.AddSlider( m_TETaperSlider, "TE Taper", 1, "%5.3f" );
+    m_DesignLayout.AddSlider( m_SinkSlider, "Sink", 10, "%7.3f" );
 
     m_DesignLayout.AddYGap();
 }
@@ -60,6 +61,7 @@ bool FilletScreen::Update()
     m_RadiusSlider.Update( fillet_ptr->m_Radius.GetID() );
     m_NumStationsSlider.Update( fillet_ptr->m_NumStations.GetID() );
     m_TETaperSlider.Update( fillet_ptr->m_TETaper.GetID() );
+    m_SinkSlider.Update( fillet_ptr->m_Sink.GetID() );
 
     return true;
 }
