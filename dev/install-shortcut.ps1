@@ -13,7 +13,7 @@ foreach ($dir in $Targets) {
     $lnk.TargetPath = 'powershell.exe'
     $lnk.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$RunScript`""
     $lnk.WorkingDirectory = $PSScriptRoot
-    $lnk.Description = 'Rebuild and launch OpenVSP from my fork'
+    $lnk.Description = 'Rebuild and launch TitanVSP from this checkout'
     if (Test-Path $Icon) { $lnk.IconLocation = "$Icon,0" }
     $lnk.Save()
     Write-Host "Created $($lnk.FullName)"

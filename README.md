@@ -1,13 +1,16 @@
-# OpenVSP with Fillets
+# TitanVSP
 
-This is a fork of [OpenVSP](https://github.com/OpenVSP/OpenVSP), based on **OpenVSP 3.55.0**.
-It adds a **Fillet** component that blends wings, fuselages and nacelles into each other with
-smooth rolling-ball fillets, and Windows scripts that build and launch it in one step.
-Everything else is upstream OpenVSP, unchanged.
+TitanVSP is [OpenVSP](https://github.com/OpenVSP/OpenVSP) **3.55.0** with a **Fillet**
+component that blends wings, fuselages and nacelles into each other with smooth rolling-ball
+fillets, plus Windows scripts that build and launch it in one step. Everything else is upstream
+OpenVSP, unchanged.
+
+**Download:** a ready-to-run Windows build is on the
+[Releases](https://github.com/Titan-Dynamics/TitanVSP/releases) page.
 
 - [About OpenVSP](#about-openvsp)
 - [Build and run](#build-and-run)
-- [What's new in this fork](#whats-new-in-this-fork)
+- [What's new in TitanVSP](#whats-new-in-titanvsp)
 - [Keeping up with upstream](#keeping-up-with-upstream)
 - [License](#license)
 
@@ -57,8 +60,8 @@ The `dev\` scripts build everything, install it next to the repo, and launch it.
 **2. Clone, build and launch:**
 
 ```powershell
-git clone https://github.com/MohammadAdib/OpenVSP.git
-cd OpenVSP
+git clone https://github.com/Titan-Dynamics/TitanVSP.git
+cd TitanVSP
 powershell -ExecutionPolicy Bypass -File dev\run.ps1
 ```
 
@@ -81,7 +84,7 @@ powershell -ExecutionPolicy Bypass -File dev\install-shortcut.ps1
 The build output lives next to the repo, not inside it:
 
 ```
-<parent>\OpenVSP                  this repo
+<parent>\TitanVSP                 this repo
 <parent>\OpenVSP-build\Libraries  third-party libraries (built once)
 <parent>\OpenVSP-build\vsp        OpenVSP build tree
 <parent>\OpenVSP-build\install    runnable OpenVSP: vsp.exe and its resources
@@ -103,11 +106,11 @@ See [dev/README.md](dev/README.md) for more on the scripts.
 
 ### Linux and macOS
 
-This fork's changes are plain C++ in the normal source tree, so follow the
+TitanVSP's changes are plain C++ in the normal source tree, so follow the
 [upstream build instructions](https://github.com/OpenVSP/OpenVSP/blob/main/README.md).
-Using the SuperProject is the easy route. The fork has only been built and tested on Windows.
+Using the SuperProject is the easy route. TitanVSP has only been built and tested on Windows.
 
-## What's new in this fork
+## What's new in TitanVSP
 
 ### Fillet component
 
@@ -197,16 +200,26 @@ The Windows build enables the Python API and sets up a venv with the bindings, a
 
 ## Keeping up with upstream
 
-`origin` is this fork and `upstream` is OpenVSP. To pull in new upstream work:
+TitanVSP's history starts with one commit importing OpenVSP 3.55.0 (upstream tag
+`OpenVSP_3.55.0`), with TitanVSP's own changes on top. OpenVSP's full history stays in the
+[upstream repository](https://github.com/OpenVSP/OpenVSP).
+
+To move to a newer OpenVSP release, apply upstream's changes between the two releases as one
+commit. For example, for 3.56.0:
 
 ```powershell
 git remote add upstream https://github.com/OpenVSP/OpenVSP.git   # once
-git fetch upstream
-git merge upstream/main
+git fetch upstream --tags
+git diff --binary OpenVSP_3.55.0 OpenVSP_3.56.0 | git apply -3
+git commit -m "Update to OpenVSP 3.56.0"
 ```
+
+`-3` falls back to a three-way merge wherever TitanVSP changed the same lines, and leaves any
+conflicts for you to resolve as usual. Don't push the upstream tags (`git push --tags`), or
+OpenVSP's release tags will show up in TitanVSP.
 
 ## License
 
-Same as upstream: the NASA Open Source Agreement (NOSA) version 1.3. See [LICENSE](LICENSE).
-OpenVSP builds on many third-party libraries, credited in the
-[upstream README](https://github.com/OpenVSP/OpenVSP/blob/main/README.md).
+TitanVSP is a modified version of OpenVSP, under the same license as upstream: the NASA Open
+Source Agreement (NOSA) version 1.3. See [LICENSE](LICENSE). OpenVSP builds on many third-party
+libraries, credited in the [upstream README](https://github.com/OpenVSP/OpenVSP/blob/main/README.md).
