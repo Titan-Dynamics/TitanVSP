@@ -130,7 +130,7 @@ StructScreen::StructScreen( ScreenMgr* mgr ) : TabScreen( mgr, 550, 554 + STRUCT
     m_ModelUnitChoice.AddItem( "CM", vsp::LEN_CM );
     m_ModelUnitChoice.AddItem( "M", vsp::LEN_M );
     m_ModelUnitChoice.AddItem( "Consistent", vsp::LEN_UNITLESS );
-    m_StructureTabLayout.AddChoice( m_ModelUnitChoice, "OpenVSP Model Unit System (Length)" );
+    m_StructureTabLayout.AddChoice( m_ModelUnitChoice, "TitanVSP Model Unit System (Length)" );
 
     string squared( 1, (char) 178 );
     string bin_name = "BIN (lbf sec" + squared + " / in, in)";

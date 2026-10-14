@@ -1,4 +1,4 @@
-# One-click entry point: incrementally rebuilds OpenVSP from this repo, then launches it.
+# One-click entry point: incrementally rebuilds TitanVSP from this repo, then launches it.
 # Pass -NoBuild to skip the build and launch the last successful build.
 
 param([switch]$NoBuild)

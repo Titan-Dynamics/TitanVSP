@@ -27,7 +27,7 @@ PreferencesScreen::PreferencesScreen( ScreenMgr* mgr ) : BasicScreen( mgr, 300, 
     m_BorderLayout.AddDividerBox( "File Chooser GUI" );
     m_BorderLayout.AddYGap();
 
-    m_FCTypeChoice.AddItem( "OpenVSP Default", vsp::FC_OPENVSP );
+    m_FCTypeChoice.AddItem( "TitanVSP Default", vsp::FC_OPENVSP );
     m_FCTypeChoice.AddItem( "Native", vsp::FC_NATIVE );
     m_FCTypeChoice.UpdateItems();
 

@@ -68,7 +68,7 @@ powershell -ExecutionPolicy Bypass -File dev\run.ps1
 The first build compiles the third-party libraries too and takes a while. After that, builds are
 incremental.
 
-**3. Optional:** add a one-click "OpenVSP (Dev)" shortcut to the Desktop and Start Menu. It
+**3. Optional:** add a one-click "TitanVSP (Dev)" shortcut to the Desktop and Start Menu. It
 rebuilds whatever you've changed, then launches:
 
 ```powershell
@@ -79,7 +79,7 @@ powershell -ExecutionPolicy Bypass -File dev\install-shortcut.ps1
 | --- | --- |
 | `dev\build.ps1` | Builds the libraries (first time only) and OpenVSP, and installs it. `-Clean` rebuilds OpenVSP from scratch; `-CleanAll` rebuilds the libraries too. |
 | `dev\run.ps1` | Incremental build, then launches `vsp.exe`. `-NoBuild` just launches the last build. |
-| `dev\install-shortcut.ps1` | Creates the "OpenVSP (Dev)" shortcut, which runs `run.ps1`. |
+| `dev\install-shortcut.ps1` | Creates the "TitanVSP (Dev)" shortcut, which runs `run.ps1`. |
 
 The build output lives next to the repo, not inside it:
 

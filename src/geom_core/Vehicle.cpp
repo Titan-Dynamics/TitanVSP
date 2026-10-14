@@ -310,7 +310,7 @@ Vehicle::Vehicle()
     m_MeasureLenUnit.Init( "LenUnit", "Measure", this, vsp::LEN_UNITLESS, vsp::LEN_MM, vsp::LEN_UNITLESS );
 
     m_StructModelUnit.Init( "StructModelUnit", "FeaStructure", this, vsp::LEN_UNITLESS, vsp::LEN_MM, vsp::LEN_UNITLESS );
-    m_StructModelUnit.SetDescript( "OpenVSP model unit system" );
+    m_StructModelUnit.SetDescript( "TitanVSP model unit system" );
 
     m_StructUnit.Init( "StructUnit", "FeaStructure", this, vsp::BFT_UNIT, vsp::SI_UNIT, vsp::BIN_UNIT );
     m_StructUnit.SetDescript( "Unit System for output FEA Structures" );
@@ -892,7 +892,7 @@ bool Vehicle::CheckForHelp( const string & path )
 
     if( !CheckForFile( path, helpfile ) )
     {
-        fprintf( stderr, "WARNING %d: OpenVSP Help Not Found. \n"
+        fprintf( stderr, "WARNING %d: TitanVSP Help Not Found. \n"
             "\tExpected here: %s\n",
             vsp::VSP_FILE_DOES_NOT_EXIST,
             ( path + string("/") + helpfile ).c_str() );
