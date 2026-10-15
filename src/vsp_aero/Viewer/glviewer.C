@@ -7902,6 +7902,40 @@ void GL_VIEWER::GetCommentTextString(char *c, size_t siz)
 #                                                                              #
 ##############################################################################*/
 
+// TitanVSP: which way a drag moves the view, from the buttons and keys held, as in TitanVSP's
+// main 3D view.
+int GL_VIEWER::DragMode(void)
+{
+
+    if ( Fl::event_button1() && Fl::event_button3() ) return DRAG_ZOOM;
+
+    if ( Fl::event_button1() ) {
+
+       if ( Fl::event_state(FL_ALT) )  return DRAG_PAN;
+       if ( Fl::event_state(FL_CTRL) ) return DRAG_ZOOM;
+       if ( Fl::event_state(FL_META) ) return DRAG_ZOOM;
+
+       return DRAG_ROTATE;
+
+    }
+
+    if ( Fl::event_button2() ) return DRAG_ZOOM;
+    if ( Fl::event_button3() ) return DRAG_PAN;
+
+    return DRAG_NONE;
+
+}
+
+// TitanVSP: how far NewTransX or NewTransY moves for the model to follow the cursor one pixel.
+float GL_VIEWER::PanPerPixel(void)
+{
+
+    float zs = ZoomScale > 0. ? ZoomScale : 1.;
+
+    return 3.*ViewSize / ( w() * NewScale * zs );
+
+}
+
 int GL_VIEWER::handle(int event)
 {
 
@@ -8079,100 +8113,107 @@ int GL_VIEWER::handle(int event)
 
        // One of the buttons was pushed
 
-	    case FL_PUSH:      
-         
-         // Button 1 Down - Rotation Control
+      // TitanVSP: the mouse works as in TitanVSP's main 3D view.  Left drag rotates; right
+      // drag, or Alt + left, pans with the model following the cursor; middle drag, Ctrl +
+      // left, or left + right zooms; the wheel zooms about the point under the cursor.
 
-	      if ( Fl::event_button1() && !Fl::event_state(FL_CTRL) && !Fl::event_state(FL_META) ) {
+       case FL_ENTER:
+       case FL_LEAVE:
 
-		     OldX = Fl::event_x();
-		     OldY = Fl::event_y();
+          return 1;
 
-		   }
+       case FL_PUSH:
 
-         // Button 2 Down - Zoom Control
+          OldX = Fl::event_x();
+          OldY = Fl::event_y();
 
-	      if ( Fl::event_button2() || ( Fl::event_state(FL_CTRL) && Fl::event_button1() ) ) {
+          OldScale = NewScale;
 
-		     OldX = Fl::event_x();
-		     OldY = Fl::event_y();
+          OldTransX = NewTransX;
+          OldTransY = NewTransY;
 
-		     OldScale = NewScale;
+          redraw();
 
-		   }
+          Fl::focus(this);
 
-          // Button 3 Down - Translation Control
+          return 1;
 
-	      if ( Fl::event_button3() || ( Fl::event_state(FL_META) && Fl::event_button1() )  ) {
+       case FL_DRAG:
 
-		     OldX = Fl::event_x();
-		     OldY = Fl::event_y();
+          NewX = Fl::event_x();
+          NewY = Fl::event_y();
 
-		     OldTransX = NewTransX;
-		     OldTransY = NewTransY;
+          switch ( DragMode() ) {
 
-		   }
+             case DRAG_ROTATE:
 
-	      redraw();
+                trackball(OldQuat,
+                          2.*(2.*OldX - w()) / w(), 2.*(h() - 2.*OldY) / h(),
+                          2.*(2.*NewX - w()) / w(), 2.*(h() - 2.*NewY) / h() );
 
-	      Fl::focus(this);
+                add_quats(OldQuat, NewQuat, NewQuat);
 
-	      return 1;
+                OldX = NewX;
+                OldY = NewY;
 
-       // One of the buttons was pushed and the mouse dragged
+                break;
 
-	    case FL_DRAG:
+             case DRAG_ZOOM:
 
-          // Button 1 is dragged - rotation
+                // Down zooms in, up zooms out, about the middle of the view.
 
-	      if ( Fl::event_button1() && !Fl::event_state(FL_CTRL) && !Fl::event_state(FL_META) ) {
+                q = (float) -( ( OldY - NewY )/400. );
 
-             NewX = Fl::event_x();
-             NewY = Fl::event_y();
+                NewScale = OldScale * exp(q);
 
-             trackball(OldQuat,
-                       2.*(2.*OldX - w()) / w(), 2.*(h() - 2.*OldY) / h(),
-                       2.*(2.*NewX - w()) / w(), 2.*(h() - 2.*NewY) / h() );
+                break;
 
-             add_quats(OldQuat, NewQuat, NewQuat);
+             case DRAG_PAN:
 
-		       OldX = Fl::event_x();
-		       OldY = Fl::event_y();
+                // The model moves with the cursor: a pixel is 3 ViewSize / w() across the view,
+                // and the translation is scaled by NewScale and ZoomScale when drawn.
 
-		       redraw();
+                NewTransX = OldTransX + ( NewX - OldX ) * PanPerPixel();
+                NewTransY = OldTransY - ( NewY - OldY ) * PanPerPixel();
 
-		  }
+                break;
 
-        // Button 2 is dragged - zooming
+          }
 
-		  if ( Fl::event_button2() || ( Fl::event_state(FL_CTRL) && Fl::event_button1() ) ) {
+          redraw();
 
-             NewX = Fl::event_x();
-             NewY = Fl::event_y();
+          return 1;
 
-             q = (float) -( ( OldY - NewY )/400. );
+       case FL_MOUSEWHEEL:
 
-             NewScale = OldScale * exp(q);
+          if ( Fl::event_dy() != 0 ) {
+
+             // Zoom by 15% a notch, rolling toward you to zoom out, keeping the point under the
+             // cursor where it is.  A point of the view sits at NewScale ( p + ZoomScale T ), so
+             // T moves by c ( 1 / NewScale' - 1 / NewScale ) / ZoomScale to hold point c still.
+
+             float f = Fl::event_dy() > 0 ? 1./1.15 : 1.15;
+
+             float AR = h()/(float)w();
+             float cx = ( Fl::event_x()/(float)w() - 0.5 ) * 3.*ViewSize;
+             float cy = ( 0.5 - Fl::event_y()/(float)h() ) * 3.*AR*ViewSize;
+
+             float s0 = NewScale;
+             float s1 = NewScale * f;
+             float zs = ZoomScale > 0. ? ZoomScale : 1.;
+
+             NewTransX += cx * ( 1./s1 - 1./s0 ) / zs;
+             NewTransY += cy * ( 1./s1 - 1./s0 ) / zs;
+
+             NewScale = OldScale = s1;
+             OldTransX = NewTransX;
+             OldTransY = NewTransY;
 
              redraw();
 
-	      }
+          }
 
-         // Button 3 is dragged - translation
-
-         if ( Fl::event_button3() || ( Fl::event_state(FL_META) && Fl::event_button1() ) ) {
-
-             NewX = Fl::event_x();
-             NewY = Fl::event_y();
-
-             NewTransX = ( OldTransX + ( ( NewX - OldX )/1000. ) );
-             NewTransY = ( OldTransY - ( ( NewY - OldY )/1000. ) );
-
-             redraw();
-
-	      }
-
-	      return 1;
+          return 1;
 
 	   default:
 

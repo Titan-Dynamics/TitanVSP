@@ -88,6 +88,11 @@ same palette, and its 3D view opens on the same dark slate background, with ligh
 legend. Trailing wakes draw light blue. **View → Use White Background** switches the view to
 white, with the original colours, for printing or screenshots.
 
+The VSPAERO Viewer's 3D view also takes the mouse like TitanVSP's main 3D view: left-drag
+rotates; right-drag or Alt+left-drag pans, with the model following the cursor; middle-drag,
+Ctrl+left-drag or left+right-drag zooms; and the mouse wheel zooms about the point under the
+cursor.
+
 ## Perspective view
 
 **View → Perspective** (key **5**) switches every viewport between orthographic and perspective

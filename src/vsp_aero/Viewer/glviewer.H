@@ -929,6 +929,11 @@ public:
 
     int handle(int event);
 
+    // TitanVSP: mouse controls as in TitanVSP's main 3D view.
+    enum { DRAG_NONE, DRAG_ROTATE, DRAG_PAN, DRAG_ZOOM };
+    int DragMode(void);
+    float PanPerPixel(void);
+
     // Access functions
 
     void SetSize(float InputSize) { size = InputSize; };
