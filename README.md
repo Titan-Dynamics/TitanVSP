@@ -2,8 +2,10 @@
 
 TitanVSP is [OpenVSP](https://github.com/OpenVSP/OpenVSP) **3.55.0** with a **Fillet**
 component that blends wings and fuselages into each other with smooth rolling-ball
-fillets, plus Windows scripts that build and launch it in one step. Everything else is upstream
-OpenVSP, unchanged.
+fillets, a dark theme, a perspective view, the system file dialog, and Windows scripts that
+build and launch it in one step. Everything else is upstream OpenVSP, unchanged.
+
+**What's changed:** every change from upstream OpenVSP is listed in [CHANGES.md](CHANGES.md).
 
 **Download:** a ready-to-run Windows build is on the
 [Releases](https://github.com/Titan-Dynamics/TitanVSP/releases) page.
@@ -112,6 +114,10 @@ Using the SuperProject is the easy route. TitanVSP has only been built and teste
 
 ## What's new in TitanVSP
 
+This section covers the main features. [CHANGES.md](CHANGES.md) lists every change from
+upstream OpenVSP. If you're working on the code, including with a coding agent, start with
+[AGENTS.md](AGENTS.md), which explains how the fork's code works.
+
 ### Fillet component
 
 A **Fillet** blends one component into another with a smooth, concave rolling-ball fillet, the
@@ -186,6 +192,21 @@ The parameters are `Radius`, `NumStations`, `TETaper` and `Sink`, all in the `De
 - If the ball can't fit all the way round a junction, the status line says so; try a smaller
   **Radius**.
 - A rebuild takes about 0.1–1.5 s, depending on the junction.
+
+### Dark theme
+
+The interface, window title bars and 3D view are dark. Components draw in light grey, and the
+selected one is outlined in white.
+
+### Perspective view
+
+**View → Perspective** (key **5**) switches the 3D view between orthographic and perspective,
+keeping the same framing.
+
+### System file dialog
+
+Open, save, import and export use the Windows file dialog. OpenVSP's own chooser is still
+under **File → Preferences… → File Chooser**.
 
 ### Windows dev scripts
 
