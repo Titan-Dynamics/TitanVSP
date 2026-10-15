@@ -111,7 +111,7 @@ GL_VIEWER::GL_VIEWER(int x,int y,int w,int h,const char *l) : Fl_Gl_Window(x,y,w
     DrawSmoothShadeIsOn                  = 0;
     DrawLegendIsOn                       = 0;
     DrawLabelIsOn                        = 0;
-    DrawWithWhiteBackgroundIsOn          = 1;
+    DrawWithWhiteBackgroundIsOn          = 0;
 
     DrawWireFrameIsOn                    = 0;
     DrawShadedIsOn                       = 1;
@@ -8254,9 +8254,10 @@ void GL_VIEWER::Draw(void)
 
     else {
 
-       BackgroundRGBA[0] = 0.0;
-       BackgroundRGBA[1] = 0.0;
-       BackgroundRGBA[2] = 0.9;
+       // TitanVSP: dark slate, as in TitanVSP's own 3D view.
+       BackgroundRGBA[0] = 38.0/255.0;
+       BackgroundRGBA[1] = 41.0/255.0;
+       BackgroundRGBA[2] = 46.0/255.0;
        BackgroundRGBA[3] = 0.0;
 
        TextRGBA[0] = 1.0;
@@ -9627,8 +9628,9 @@ void GL_VIEWER::DrawWakes(void)
                    
                    Alpha = MAX(Alpha,0.3);
                    
-                   rgb[0] = 0.;
-                   rgb[1] = 0.;
+                   // TitanVSP: light blue on the dark background.
+                   rgb[0] = DrawWithWhiteBackgroundIsOn ? 0. : 0.45;
+                   rgb[1] = DrawWithWhiteBackgroundIsOn ? 0. : 0.70;
                    rgb[2] = 1.;
                    rgb[3] = Alpha;
                        
@@ -9652,9 +9654,9 @@ void GL_VIEWER::DrawWakes(void)
           
           if ( DrawWakePointsIsOn ) {
              
-             rgb[0] = 0.;
-             rgb[1] = 0.;
-             rgb[2] = 0.;
+             rgb[0] = DrawWithWhiteBackgroundIsOn ? 0. : 0.8;
+             rgb[1] = DrawWithWhiteBackgroundIsOn ? 0. : 0.8;
+             rgb[2] = DrawWithWhiteBackgroundIsOn ? 0. : 0.8;
              rgb[3] = 0.5;
          
              glColor4fv(rgb);
@@ -9692,8 +9694,9 @@ void GL_VIEWER::DrawWakes(void)
                       
                       Alpha = MAX(Alpha,0.3);
                       
-                      rgb[0] = 0.;
-                      rgb[1] = 0.;
+                      // TitanVSP: light blue on the dark background.
+                      rgb[0] = DrawWithWhiteBackgroundIsOn ? 0. : 0.45;
+                      rgb[1] = DrawWithWhiteBackgroundIsOn ? 0. : 0.70;
                       rgb[2] = 1.;
                       rgb[3] = Alpha;
                        
@@ -9719,9 +9722,9 @@ void GL_VIEWER::DrawWakes(void)
              
              if ( DrawWakePointsIsOn ) {
                 
-                rgb[0] = 0.;
-                rgb[1] = 0.;
-                rgb[2] = 0.;
+                rgb[0] = DrawWithWhiteBackgroundIsOn ? 0. : 0.8;
+                rgb[1] = DrawWithWhiteBackgroundIsOn ? 0. : 0.8;
+                rgb[2] = DrawWithWhiteBackgroundIsOn ? 0. : 0.8;
                 rgb[3] = 0.5;
              
                 glColor4fv(rgb);

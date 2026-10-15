@@ -83,6 +83,11 @@ The whole interface is dark.
 
 Models keep the colours saved in them, so only new components pick up #aaa.
 
+**VSPAERO Viewer** (`vspviewer.exe`) is dark too: its panels, menus, buttons and title bar use the
+same palette, and its 3D view opens on the same dark slate background, with light text and
+legend. Trailing wakes draw light blue. **View → Use White Background** switches the view to
+white, with the original colours, for printing or screenshots.
+
 ## Perspective view
 
 **View → Perspective** (key **5**) switches every viewport between orthographic and perspective

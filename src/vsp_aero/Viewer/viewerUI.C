@@ -335,7 +335,7 @@ Fl_Menu_Item viewerUI::menu_ViewMenu[] = {
  {"Rear View", 0x4ffc3,  (Fl_Callback*)viewerUI::cb_ViewMenuRearView, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"Iso View Up", 0x4ffc4,  (Fl_Callback*)viewerUI::cb_ViewMenuIsoViewUp, 0, 0, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {"Iso View Down", 0x4ffc5,  (Fl_Callback*)viewerUI::cb_ViewMenuIsoViewDown, 0, 128, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
- {"Use Blue Background", 0,  (Fl_Callback*)viewerUI::cb_ViewMenuPickBlueBackground, 0, 2, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
+ {"Use White Background", 0,  (Fl_Callback*)viewerUI::cb_ViewMenuPickBlueBackground, 0, 2, (uchar)FL_NORMAL_LABEL, 0, 14, 0},
  {0,0,0,0,0,0,0,0,0}
 };
 Fl_Menu_Item* viewerUI::ViewMenuResetView = viewerUI::menu_ViewMenu + 0;

@@ -7,6 +7,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <FL/Fl.H>
+#include <FL/Fl_Tooltip.H>
+#include <FL/Fl_Window.H>
+#include <FL/platform.H>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <dwmapi.h>
+#include <set>
+#pragma comment( lib, "dwmapi.lib" )
+#endif
 #include "viewerUI.H"
 
 int ForceView = 0;
@@ -26,9 +36,60 @@ float BoxSize;
 #                                                                              #
 ##############################################################################*/
 
+//==== TitanVSP dark theme ====//
+// The same palette as TitanVSP's own windows: dark background and gray ramp, darker inputs and
+// lists, light text, blue selection.  The viewer colours its buttons and frames with a few fixed
+// palette entries; those become muted versions of the same hues.
+static void ApplyDarkTheme()
+{
+    Fl::scheme( "GTK+" );
+
+    Fl::background( 48, 50, 54 );
+    Fl::background2( 33, 35, 38 );
+    Fl::foreground( 222, 224, 228 );
+
+    Fl::set_color( FL_SELECTION_COLOR, 74, 128, 204 );
+    Fl::set_color( FL_INACTIVE_COLOR, 128, 130, 136 );
+    Fl::set_color( FL_BLACK, 222, 224, 228 );
+
+    Fl::set_color( ( Fl_Color )2, 62, 128, 84 );        // Toggles when on.
+    Fl::set_color( ( Fl_Color )4, 52, 84, 140 );        // Buttons, the view's frame, list selection.
+    Fl::set_color( ( Fl_Color )5, 104, 72, 128 );       // Draw toggles.
+    Fl::set_color( ( Fl_Color )6, 56, 116, 126 );
+    Fl::set_color( ( Fl_Color )23, 40, 42, 46 );        // Read-only fields.
+    Fl::set_color( ( Fl_Color )231, 74, 128, 204 );     // Menu highlight.
+
+    Fl_Tooltip::color( fl_rgb_color( 30, 32, 35 ) );
+    Fl_Tooltip::textcolor( fl_rgb_color( 222, 224, 228 ) );
+}
+
+// Windows draws title bars light unless asked; ask each window, once, for a dark one.
+static void DarkTitleBars( void * )
+{
+#ifdef _WIN32
+    static std::set< HWND > done;
+    for ( Fl_Window* win = Fl::first_window(); win; win = Fl::next_window( win ) )
+    {
+        HWND hwnd = fl_win32_xid( win );
+        if ( !hwnd || done.count( hwnd ) )
+        {
+            continue;
+        }
+        done.insert( hwnd );
+        BOOL dark = TRUE;
+        const DWORD DWMWA_USE_IMMERSIVE_DARK_MODE_ATTR = 20;
+        DwmSetWindowAttribute( hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_ATTR, &dark, sizeof( dark ) );
+        SetWindowPos( hwnd, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED );
+    }
+#endif
+    Fl::repeat_timeout( 0.5, DarkTitleBars );
+}
+
 int main(int argc, char **argv) {
 
     int i;
+
+    ApplyDarkTheme();
 
     viewerUI *vui = new viewerUI;
 
@@ -133,6 +194,8 @@ int main(int argc, char **argv) {
     argc = 1;
 
     vui->show(argc, argv);
+
+    Fl::add_timeout( 0.0, DarkTitleBars );
 
     return Fl::run();
 }
