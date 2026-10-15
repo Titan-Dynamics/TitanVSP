@@ -51,6 +51,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <functional>
 #include <map>
 
 using namespace vsp;
@@ -595,6 +596,68 @@ private:
     double m_Tol;
 };
 
+// The ball of radius r whose centre lies in the plane through p across t and is r from both
+// bodies a and b, by Newton from p.  Found from the distances to the bodies, it holds up where a
+// surface's own parameters do not, such as a degenerate patch at an airfoil's nose.
+bool BallInPlane( SurfDist & a, SurfDist & b, const vec3d & p, const vec3d & t, double r, Station & s )
+{
+    vec3d e1 = fabs( t.x() ) < 0.9 ? vec3d( 1.0, 0.0, 0.0 ) : vec3d( 0.0, 1.0, 0.0 );
+    e1 = e1 - t * dot( e1, t );
+    e1.normalize();
+    vec3d e2 = cross( t, e1 );
+    e2.normalize();
+
+    vec3d c = p;
+    for ( int it = 0; it < 40; it++ )
+    {
+        vec3d qa, qb, na, nb;
+        double ua, wa, ub, wb;
+        double da = a.Eval( c, qa, na, ua, wa );
+        double db = b.Eval( c, qb, nb, ub, wb );
+        vec3d ga = ( c - qa ) * ( da < 0.0 ? -1.0 : 1.0 );
+        vec3d gb = ( c - qb ) * ( db < 0.0 ? -1.0 : 1.0 );
+        if ( ga.mag() < 1.0e-12 * r || gb.mag() < 1.0e-12 * r )
+        {
+            return false;
+        }
+        ga.normalize();
+        gb.normalize();
+
+        double ra = da - r, rb = db - r;
+        if ( fabs( ra ) + fabs( rb ) < 1.0e-7 * r )
+        {
+            s.m_C = c;
+            s.m_QA = qa;
+            s.m_QB = qb;
+            s.m_UA = ua;
+            s.m_WA = wa;
+            s.m_UB = ub;
+            s.m_WB = wb;
+            s.m_NA = ga;
+            s.m_NB = gb;
+            return true;
+        }
+
+        double a11 = dot( ga, e1 ), a12 = dot( ga, e2 );
+        double a21 = dot( gb, e1 ), a22 = dot( gb, e2 );
+        double det = a11 * a22 - a12 * a21;
+        if ( !std::isfinite( det ) || fabs( det ) < 1.0e-12 )
+        {
+            return false;
+        }
+        double x = ( -ra * a22 + rb * a12 ) / det;
+        double y = ( -rb * a11 + ra * a21 ) / det;
+        double step = sqrt( x * x + y * y );
+        if ( step > 0.5 * r )
+        {
+            x *= 0.5 * r / step;
+            y *= 0.5 * r / step;
+        }
+        c = c + e1 * x + e2 * y;
+    }
+    return false;
+}
+
 // Largest change in direction, from the ball's centre, of either contact between two stations.
 double TurnAngle( const Station & a, const Station & b )
 {
@@ -614,9 +677,10 @@ double TurnAngle( const Station & a, const Station & b )
 }
 
 // Skins the fillet through its stations, in order along the junction.  A closed fillet -- a ring
-// round a loop between two bodies -- runs on from its last station round to its first.
+// round a loop between two bodies -- runs on from its last station round to its first.  buried
+// says whether point p, past junction point j, is buried in both bodies.
 bool SkinStations( const vector< Station > & stations, const OffsetPair & op, double R, double sink,
-                   bool closed, VspSurf & out )
+                   bool closed, const std::function< bool( const vec3d &, const vec3d & ) > & buried, VspSurf & out )
 {
     const int n = (int)stations.size();
     if ( n < 5 )
@@ -652,6 +716,72 @@ bool SkinStations( const vector< Station > & stations, const OffsetPair & op, do
     // wing's TE, and is kept within reason of the ball's size.
     const double dip = 0.15;
     const double sink0 = std::min( std::max( sink, 0.0 ), 4.0 * R );
+
+    // How far past the junction each section closes, buried in both bodies.  A big ball next to a
+    // thin body -- a slim fuselage under a large fillet -- would put a point that far out the
+    // other side, and the section's closing edges would show; so it comes back toward the
+    // junction until it is buried.  Then it is eased from station to station -- the least of its
+    // neighbours', averaged -- since a sudden change in one section's shape, even out of sight,
+    // makes the skin overshoot and fold the visible face.
+    vector< double > depth( n, 0.0 );
+    for ( int i = 0; i < n; i++ )
+    {
+        const Station & s = stations[i];
+        if ( s.m_Degenerate )
+        {
+            continue;
+        }
+        vec3d in = s.m_J - s.m_C;
+        in.normalize();
+        depth[i] = 0.3 * s.m_R + dip * sink0 * s.m_R / R;
+        for ( int k = 0; k < 16 && !buried( s.m_J, s.m_J + in * depth[i] ); k++ )
+        {
+            depth[i] *= 0.5;
+        }
+    }
+    {
+        const int reach = 2;
+        auto at = [&]( const vector< double > & d, int j )
+        {
+            if ( closed )
+            {
+                return d[( ( j % n ) + n ) % n];
+            }
+            return d[std::min( std::max( j, 0 ), n - 1 )];
+        };
+        vector< double > least( n ), eased( n );
+        for ( int i = 0; i < n; i++ )
+        {
+            least[i] = depth[i];
+            for ( int j = i - reach; j <= i + reach; j++ )
+            {
+                if ( !stations[( ( j % n ) + n ) % n].m_Degenerate || !closed )
+                {
+                    double d = at( depth, j );
+                    if ( d > 0.0 )
+                    {
+                        least[i] = std::min( least[i], d );
+                    }
+                }
+            }
+        }
+        for ( int i = 0; i < n; i++ )
+        {
+            double sum = 0.0;
+            int cnt = 0;
+            for ( int j = i - reach; j <= i + reach; j++ )
+            {
+                double d = at( least, j );
+                if ( d > 0.0 )
+                {
+                    sum += d;
+                    cnt++;
+                }
+            }
+            eased[i] = cnt > 0 ? std::min( depth[i], sum / cnt ) : depth[i];
+        }
+        depth.swap( eased );
+    }
 
     vector< VspCurve > ribs( n );
     vector< vec3d > centroid( n );
@@ -699,7 +829,7 @@ bool SkinStations( const vector< Station > & stations, const OffsetPair & op, do
             // Close the section through a point past the junction, buried in both bodies.
             vec3d in = s.m_J - s.m_C;
             in.normalize();
-            pts[nface] = s.m_J + in * ( 0.3 * s.m_R + dip * sk );
+            pts[nface] = s.m_J + in * depth[i];
             any_ball = true;
         }
 
@@ -1077,6 +1207,139 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
         }
     }
 
+    //==== Drop stations that step backwards ====//
+    // Round the LE of a wing whose nose is much smaller than the ball, the ball hardly moves while
+    // the chordwise lines sweep round the nose, and tiny wobbles in where it sits -- or where the
+    // junction is -- take some stations a step back.  Skinned through, those fold the fillet
+    // over on itself.  Each station must move on from the one before it the same way the next
+    // one does, in its centre, both contacts and junction point; stations that don't, or that
+    // all but repeat the one before, are dropped.
+    for ( bool dropped = true; dropped && stations.size() > 3; )
+    {
+        dropped = false;
+        for ( size_t i = 1; i + 1 < stations.size(); i++ )
+        {
+            const Station & a = stations[i - 1];
+            const Station & b = stations[i];
+            const Station & c = stations[i + 1];
+            if ( a.m_Degenerate || b.m_Degenerate || c.m_Degenerate )
+            {
+                continue;
+            }
+            const vec3d * pa[4] = { &a.m_C, &a.m_QA, &a.m_QB, &a.m_J };
+            const vec3d * pb[4] = { &b.m_C, &b.m_QA, &b.m_QB, &b.m_J };
+            const vec3d * pc[4] = { &c.m_C, &c.m_QA, &c.m_QB, &c.m_J };
+            bool back = false, still = true;
+            for ( int k = 0; k < 4; k++ )
+            {
+                vec3d ac = *pc[k] - *pa[k];
+                if ( ac.mag() > 1.0e-6 * R &&
+                     ( dot( *pb[k] - *pa[k], ac ) < 0.0 || dot( *pc[k] - *pb[k], ac ) < 0.0 ) )
+                {
+                    back = true;
+                }
+                still = still && dist( *pb[k], *pa[k] ) < 1.0e-3 * R;
+            }
+            if ( back || still )
+            {
+                stations.erase( stations.begin() + i );
+                dropped = true;
+                break;
+            }
+        }
+    }
+
+    //==== Fill gaps the ball swings across ====//
+    // Round a sharp LE a ball much bigger than the nose swings round it within a sliver of the
+    // chordwise lines -- some of them on the airfoil's degenerate nose patch, where they cannot
+    // be solved -- so it can still turn a long way between stations, and the fillet folds across
+    // the gap.  Fill such gaps with balls held in planes across the way their centres go, found
+    // from the distances to the wing and fuselage.
+    {
+        vector< Station > filled;
+        for ( size_t i = 0; i < stations.size(); i++ )
+        {
+            filled.push_back( stations[i] );
+            if ( i + 1 == stations.size() )
+            {
+                break;
+            }
+            const Station & a = stations[i];
+            const Station & b = stations[i + 1];
+            double turn = TurnAngle( a, b );
+            if ( turn <= max_turn || a.m_Degenerate || b.m_Degenerate )
+            {
+                continue;
+            }
+            const int nfill = std::min( (int)std::ceil( turn / max_turn ) - 1, 60 );
+            vector< Station > fill;
+            for ( int k = 1; k <= nfill; k++ )
+            {
+                // Between the two centres, in the plane across the line joining them.  Pushed out
+                // of the chord to where a ball swinging round between them would be.
+                double f = (double)k / ( nfill + 1 );
+                vec3d t = b.m_C - a.m_C;
+                t.normalize();
+                vec3d p = a.m_C + ( b.m_C - a.m_C ) * f;
+                Station m = ( f < 0.5 ) ? a : b;
+                m.m_R = a.m_R + ( b.m_R - a.m_R ) * f;
+                m.m_S = a.m_S + ( b.m_S - a.m_S ) * f;
+                m.m_J = a.m_J + ( b.m_J - a.m_J ) * f;
+
+                // The ball solved there is good if it touches between where its neighbours do.
+                // Next to a thin wing a big ball can be all but as close to another part of the
+                // wing, and the nearest point jumps there; then the ball between is made up from
+                // its neighbours' contacts instead, still of the full radius.
+                auto between = [&]( const vec3d & q, const vec3d & q0, const vec3d & q1 )
+                {
+                    vec3d d = q1 - q0;
+                    double s = d.mag() > 0.0 ? std::min( std::max( dot( q - q0, d ) / dot( d, d ), 0.0 ), 1.0 ) : 0.0;
+                    return dist( q, q0 + d * s ) <= 0.25 * d.mag() + 0.02 * m.m_R;
+                };
+                Station solved = m;
+                bool ok = BallInPlane( wing, fuse, p, t, m.m_R, solved ) &&
+                          between( solved.m_QA, a.m_QA, b.m_QA ) && between( solved.m_QB, a.m_QB, b.m_QB );
+                if ( ok )
+                {
+                    wing.Reset();
+                    fuse.Reset();
+                    ok = Finite( solved.m_C ) && wing( solved.m_C ) >= 0.98 * m.m_R && fuse( solved.m_C ) >= 0.98 * m.m_R;
+                }
+                if ( ok )
+                {
+                    m = solved;
+                    m.m_S = a.m_S + ( b.m_S - a.m_S ) * f;
+                    m.m_J = a.m_J + ( b.m_J - a.m_J ) * f;
+                }
+                else
+                {
+                    m.m_QA = a.m_QA + ( b.m_QA - a.m_QA ) * f;
+                    m.m_QB = a.m_QB + ( b.m_QB - a.m_QB ) * f;
+                    vec3d mid = ( m.m_QA + m.m_QB ) * 0.5;
+                    vec3d axis = m.m_QB - m.m_QA;
+                    double half = 0.5 * axis.mag();
+                    if ( half >= m.m_R || half <= 0.0 )
+                    {
+                        fill.clear();
+                        break;
+                    }
+                    axis.normalize();
+                    vec3d out = p - mid;
+                    out = out - axis * dot( out, axis );
+                    out.normalize();
+                    m.m_C = mid + out * sqrt( m.m_R * m.m_R - half * half );
+                    m.m_NA = m.m_C - m.m_QA;
+                    m.m_NB = m.m_C - m.m_QB;
+                    m.m_NA.normalize();
+                    m.m_NB.normalize();
+                }
+                fill.push_back( m );
+            }
+            filled.insert( filled.end(), fill.begin(), fill.end() );
+        }
+        stations.swap( filled );
+    }
+
     // Close off both ends at the TE in a point.
     for ( double w : { wtip, wmax - wtip } )
     {
@@ -1093,7 +1356,20 @@ bool BuildFillet( const VspSurf & wsurf, SurfDist & fuse, double R, int nstation
     }
     std::sort( stations.begin(), stations.end(), []( const Station & a, const Station & b ) { return a.m_S < b.m_S; } );
 
-    return SkinStations( stations, op, R, sink, false, out );
+    // Buried enough: no farther outside either body than the junction point itself, give or take a
+    // hair.  The junction is not always exactly on both -- by a sharp edge, say -- and a point
+    // that is in as far as the junction is hides the section's closing edges as well as can be.
+    auto buried = [&]( const vec3d & j, const vec3d & p )
+    {
+        const double tol = 0.01 * R;
+        wing.Reset();
+        fuse.Reset();
+        double wj = std::max( wing( j ), 0.0 ), fj = std::max( fuse( j ), 0.0 );
+        wing.Reset();
+        fuse.Reset();
+        return wing( p ) <= wj + tol && fuse( p ) <= fj + tol;
+    };
+    return SkinStations( stations, op, R, sink, false, buried, out );
 }
 
 //==== Between two bodies ====//
@@ -1674,7 +1950,19 @@ bool BuildRing( const VspSurf & asurf, const VspSurf & bsurf, bool bwing, const 
         stations.pop_back();
     }
 
-    return SkinStations( stations, op, R, sink, true, out );
+    // Buried enough: no farther outside either body than the junction point itself, give or take a
+    // hair.  The junction is not always exactly on both -- by a sharp edge, say.
+    auto buried = [&]( const vec3d & j, const vec3d & p )
+    {
+        const double tol = 0.01 * R;
+        ad.Reset();
+        bd.Reset();
+        double aj = std::max( ad( j ), 0.0 ), bj = std::max( bd( j ), 0.0 );
+        ad.Reset();
+        bd.Reset();
+        return ad( p ) <= aj + tol && bd( p ) <= bj + tol;
+    };
+    return SkinStations( stations, op, R, sink, true, buried, out );
 }
 
 // How many points of a grid over each of a's surfaces lie inside b.
