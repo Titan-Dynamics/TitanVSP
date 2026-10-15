@@ -2661,8 +2661,9 @@ void WingGeom::LoadDrawObjs( vector< DrawObj* > & draw_obj_vec )
     m_SectBBoxDrawObj.m_Screen = DrawObj::VSP_MAIN_SCREEN;
     m_SectBBoxDrawObj.m_GeomID = BBOXHEADER + m_ID + "ACTIVE_SECT";
     m_SectBBoxDrawObj.m_Visible = m_Vehicle->IsGeomActive( m_ID );
-    m_SectBBoxDrawObj.m_LineWidth = 4.0;
+    m_SectBBoxDrawObj.m_LineWidth = 2.0;
     m_SectBBoxDrawObj.m_LineColor = vec3d( 0.0, 1.0, 0.0 );
+    m_SectBBoxDrawObj.m_LineAlpha = 0.5;
     m_SectBBoxDrawObj.m_Type = DrawObj::VSP_LINES;
     draw_obj_vec.push_back( &m_SectBBoxDrawObj );
 

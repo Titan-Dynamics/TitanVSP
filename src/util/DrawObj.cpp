@@ -277,6 +277,7 @@ DrawObj::DrawObj()
 
     m_LineWidth = 1.0;
     m_LineColor = vec3d( 0, 0, 1 );
+    m_LineAlpha = 1.0;
 
     m_StippleFactor = 10;
     m_StipplePattern = 0xAAAA;

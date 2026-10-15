@@ -4401,6 +4401,12 @@ void Geom::LoadMainDrawObjs( vector< DrawObj* > & draw_obj_vec )
 {
     char str[256];
 
+    // TitanVSP: a selected component is drawn a little brighter -- its lines a third of the way
+    // to white, its shading lifted by a touch of emission -- so it stands out from the rest.  Only
+    // how it's drawn changes; its colour and material stay as they are.
+    const bool selected = m_Vehicle->IsGeomActive( m_ID );
+    const float lift = 0.07f;
+
     for ( int i = 0; i < (int)m_WireShadeDrawObj_vec.size(); i++ )
     {
         // Symmetry drawObjs have same m_ID. Make them unique by adding index
@@ -4428,6 +4434,15 @@ void Geom::LoadMainDrawObjs( vector< DrawObj* > & draw_obj_vec )
 
         m_WireShadeDrawObj_vec[i].m_MaterialInfo.Shininess = (float)material->m_Shininess;
 
+        if ( selected )
+        {
+            for ( int j = 0; j < 3; j++ )
+            {
+                float & e = m_WireShadeDrawObj_vec[i].m_MaterialInfo.Emission[j];
+                e = std::min( e + lift, 1.0f );
+            }
+        }
+
         // Surfaces with vsp::CFD_TRANSPARENT set -- i.e. propeller disk.
         if ( i >= 2 )
         {
@@ -4440,6 +4455,11 @@ void Geom::LoadMainDrawObjs( vector< DrawObj* > & draw_obj_vec )
         vec3d lineColor = vec3d( m_GuiDraw.GetWireColor().x() / 255.0,
                                  m_GuiDraw.GetWireColor().y() / 255.0,
                                  m_GuiDraw.GetWireColor().z() / 255.0 );
+
+        if ( selected )
+        {
+            lineColor = lineColor + ( vec3d( 1.0, 1.0, 1.0 ) - lineColor ) * ( 1.0 / 3.0 );
+        }
 
         switch ( m_GuiDraw.GetDrawType() )
         {
@@ -4518,8 +4538,9 @@ void Geom::LoadDrawObjs( vector< DrawObj* > & draw_obj_vec )
     m_HighlightDrawObj.m_Screen = DrawObj::VSP_MAIN_SCREEN;
     m_HighlightDrawObj.m_GeomID = BBOXHEADER + m_ID;
     m_HighlightDrawObj.m_Visible = isactive;
-    m_HighlightDrawObj.m_LineWidth = 4.0;
+    m_HighlightDrawObj.m_LineWidth = 2.0;
     m_HighlightDrawObj.m_LineColor = vec3d( 1.0, 1.0, 1.0 );
+    m_HighlightDrawObj.m_LineAlpha = 0.5;
     m_HighlightDrawObj.m_Type = DrawObj::VSP_LINES;
     draw_obj_vec.push_back( &m_HighlightDrawObj );
 

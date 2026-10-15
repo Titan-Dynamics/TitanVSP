@@ -589,6 +589,10 @@ public:
     * LineColor is set to blue(0, 0, 1) by default.
     */
     vec3d m_LineColor;
+    /*
+    * Line opacity, 0 to 1 (TitanVSP).  Used by VSP_LINES; 1 by default.
+    */
+    double m_LineAlpha;
 
     int m_StippleFactor;
     int m_StipplePattern;

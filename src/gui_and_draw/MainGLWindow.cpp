@@ -1928,7 +1928,7 @@ void VspGlWindow::_update( const std::vector<DrawObj *> &objects )
             {
                 rObj->setVisibility( objects[i]->m_Visible );
                 rObj->setPrimType( VSPGraphic::Common::VSP_LINES );
-                rObj->setLineColor( red, green, blue );
+                rObj->setLineColor( red, green, blue, ( float )objects[i]->m_LineAlpha );
                 rObj->setLineWidth( lineWidth );
                 rObj->setStippleFactor( stippleFactor );
                 rObj->setStipplePattern( stipplePattern );
