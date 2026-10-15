@@ -209,6 +209,13 @@ private:
     vector< vec3d > m_GizmoStartLoc;
     vector< Matrix4d > m_GizmoAttachInv;
 
+    //==== TitanVSP: click to select ====//
+    // A left click -- pressed and released without dragging -- on a component selects it; with
+    // Shift it's added to or taken out of the selection; on empty space it clears the selection.
+    void ClickSelect( int x, int y, bool toggle );
+    bool m_ClickCandidate;
+    int m_ClickX, m_ClickY;
+
 private:
     VSPGraphic::GraphicEngine * m_GEngine;
 

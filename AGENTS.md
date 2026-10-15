@@ -230,6 +230,20 @@ header comment gives the outline; this section covers what you need to change it
   curve colour is `Vehicle::m_XSecLineColor`, set in the constructor *and* `Wype()`; the
   constructor matters because opening a file at launch never calls `Wype()`.
 
+## Click to select
+
+`VspGlWindow::ClickSelect` (`MainGLWindow.cpp`), main window only. `handle()` marks a plain left
+press as a click candidate (not on a gizmo arrow, no Ctrl/Alt/Meta, not while the scene is already
+picking), drops it once the cursor moves more than 5 pixels, and on release calls `ClickSelect`.
+
+It borrows the Geom Browser's Pick machinery for one frame: `ManageGeomScreen::SetClickPick( true )`
+makes `UpdateDrawObjs` emit a `VSP_PICK_GEOM` draw object for every visible surface, `update()`
+builds the scene's pickables, and `Display::predraw` draws them in ID colours and reads the pixel
+under the click (`Scene::activatePicking`). `selectHighlight` gives the `SelectedGeom`; its draw
+object ID, less the suffix after the last `_`, is the component's ID (as in `_sendFeedback`).
+Pick mode then goes off again and the scene is rebuilt without the pickables, so dragging still
+rotates and nothing highlights on hover. `ManageGeomScreen::SetSelection` applies the result.
+
 ## Move arrows
 
 The Blender-style move gizmo lives in `VspGlWindow` (`MainGLWindow.cpp`, the `Gizmo*` methods),

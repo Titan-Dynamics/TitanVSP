@@ -106,7 +106,15 @@ public:
 
     void LoadDrawObjs( vector< DrawObj* > & draw_obj_vec );
 
+    // TitanVSP: clicking components in the 3D view.  While SetClickPick is on, the Geom Browser
+    // offers the components for picking as its Pick button does; SetSelection selects a list of
+    // them, as picking in the browser would.
+    void SetClickPick( bool pick )          { m_ClickPick = pick; }
+    void SetSelection( const vector< string > & geom_ids );
+
 protected:
+
+    bool m_ClickPick;
 
     GroupLayout m_MainLayout;
 

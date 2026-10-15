@@ -81,6 +81,9 @@ VspGlWindow::VspGlWindow( int x, int y, int w, int h, ScreenMgr * mgr, DrawObj::
 
     m_GizmoAxis = -1;
     m_GizmoHover = -1;
+
+    m_ClickCandidate = false;
+    m_ClickX = m_ClickY = 0;
     m_GizmoPx = 1.0f;
     m_GizmoSteps = 0;
     m_GizmoUndoSaved = false;
@@ -219,10 +222,15 @@ int VspGlWindow::handle( int fl_event )
         return 1;
 
     case FL_PUSH:
+        m_ClickCandidate = false;
         if ( GizmoPush( x, y ) )
         {
             return 1;
         }
+        m_ClickCandidate = m_LinkedScreen == DrawObj::VSP_MAIN_SCREEN && Fl::event_button() == FL_LEFT_MOUSE &&
+                           !Fl::event_state( FL_CTRL | FL_ALT | FL_META ) && !m_GEngine->getScene()->isPickingEnabled();
+        m_ClickX = x;
+        m_ClickY = y;
         OnPush( x, y );
         return 1;
 
@@ -231,6 +239,10 @@ int VspGlWindow::handle( int fl_event )
         {
             GizmoDrag( x, y );
             return 1;
+        }
+        if ( m_ClickCandidate && std::abs( x - m_ClickX ) + std::abs( y - m_ClickY ) > 5 * pixels_per_unit() )
+        {
+            m_ClickCandidate = false;
         }
         OnDrag( x, y );
         return 1;
@@ -242,6 +254,11 @@ int VspGlWindow::handle( int fl_event )
             return 1;
         }
         OnRelease( x, y );
+        if ( m_ClickCandidate && Fl::event_button() == FL_LEFT_MOUSE )
+        {
+            m_ClickCandidate = false;
+            ClickSelect( m_ClickX, m_ClickY, Fl::event_state( FL_SHIFT ) != 0 );
+        }
         return 1;
 
     case FL_MOUSEWHEEL:
@@ -3221,6 +3238,85 @@ void VspGlWindow::GizmoDraw()
     glPopAttrib();
 
     glUseProgram( program );
+}
+
+//==== TitanVSP: click to select ====//
+// Picks what's under ( x, y ) the way the Geom Browser's Pick mode does, but only for this click:
+// the browser offers every visible component for picking, the scene is rebuilt with them and
+// drawn once in pick colours, and the colour under the click names the component.  Then picking
+// is switched off again, so dragging still turns the view and nothing highlights on hover.
+void VspGlWindow::ClickSelect( int x, int y, bool toggle )
+{
+    ManageGeomScreen * geomScreen = dynamic_cast< ManageGeomScreen * >( m_ScreenMgr->GetScreen( vsp::VSP_MANAGE_GEOM_SCREEN ) );
+    Vehicle * veh = VehicleMgr.GetVehicle();
+    if ( !geomScreen || !veh || !m_GEngine )
+    {
+        return;
+    }
+
+    make_current();
+
+    geomScreen->SetClickPick( true );
+    update();
+
+    VSPGraphic::Scene * scene = m_GEngine->getScene();
+    m_GEngine->getDisplay()->predraw( scene, x, y );
+
+    string picked;
+    if ( scene->selectHighlight() )
+    {
+        Selectable * selected = scene->getLastSelected();
+        SelectedGeom * geom = dynamic_cast< SelectedGeom * >( selected );
+        if ( geom )
+        {
+            ID * id = _findID( geom->getSource()->getID() );
+            if ( id )
+            {
+                picked = id->geomID.substr( 0, id->geomID.find_last_of( '_' ) );
+            }
+        }
+        if ( selected )
+        {
+            scene->removeSelected( selected );
+        }
+    }
+
+    geomScreen->SetClickPick( false );
+    update();
+
+    vector< string > sel = veh->GetActiveGeomVec();
+    if ( !picked.empty() && !veh->FindGeom( picked ) )
+    {
+        picked.clear();
+    }
+
+    if ( toggle )
+    {
+        if ( picked.empty() )
+        {
+            return;
+        }
+        auto it = std::find( sel.begin(), sel.end(), picked );
+        if ( it != sel.end() )
+        {
+            sel.erase( it );
+        }
+        else
+        {
+            sel.push_back( picked );
+        }
+    }
+    else
+    {
+        sel.clear();
+        if ( !picked.empty() )
+        {
+            sel.push_back( picked );
+        }
+    }
+
+    geomScreen->SetSelection( sel );
+    redraw();
 }
 
 int VspGlWindow::OnWheelScroll( int dx, int dy, int x, int y )

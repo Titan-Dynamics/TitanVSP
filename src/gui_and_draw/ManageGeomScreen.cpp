@@ -146,6 +146,7 @@ ManageGeomScreen::ManageGeomScreen( ScreenMgr* mgr ) : BasicScreen( mgr, 275, 67
     CreateScreens();
 
     m_VehSelected = false;
+    m_ClickPick = false;
     m_VehOpen = true;
     m_NeedsShowHideGeoms = true;
 }
@@ -1383,6 +1384,16 @@ void ManageGeomScreen::Set( const std::string &geomId )
     m_ScreenMgr->SetUpdateFlag( true );
 }
 
+void ManageGeomScreen::SetSelection( const vector< string > & geom_ids )
+{
+    m_GeomBrowser->deselect_all();
+    m_VehiclePtr->SetActiveGeomVec( geom_ids );
+    m_SelVec = m_VehiclePtr->GetActiveGeomVec();
+
+    SetNeedsShowHideGeoms();
+    m_ScreenMgr->SetUpdateFlag( true );
+}
+
 void ManageGeomScreen::TriggerPickSwitch()
 {
     m_PickButton.GetFlButton()->value( !m_PickButton.GetFlButton()->value() );
@@ -1403,7 +1414,7 @@ void ManageGeomScreen::UpdateDrawObjs()
 {
     m_PickList.clear();
 
-    if( m_PickButton.GetFlButton()->value() == 1 )
+    if( m_PickButton.GetFlButton()->value() == 1 || m_ClickPick )
     {
         vector< Geom* > geom_vec = m_VehiclePtr->FindGeomVec( m_VehiclePtr->GetGeomVec() );
         for( int i = 0; i < ( int )geom_vec.size(); i++ )

@@ -30,7 +30,7 @@ Models, scripts and the `openvsp` Python API work as they do in OpenVSP 3.55.0.
 | --- | --- |
 | **Geometry** | A **Fillet** component: smooth, watertight rolling-ball fillets at wing roots and wherever two bodies meet. |
 | **Interface** | A dark theme throughout, including title bars and the 3D view; light component lines with white selection highlights; the Titan Dynamics logo in the 3D view. |
-| **3D view** | Blender-style move arrows: drag a selected component along X, Y or Z in whole units. An orthographic/perspective switch (**View → Perspective**, key **5**) that keeps the framing. |
+| **3D view** | Click a component to select it, and Blender-style move arrows to drag it along X, Y or Z in whole units. An orthographic/perspective switch (**View → Perspective**, key **5**) that keeps the framing. |
 | **Files** | The Windows Open and Save dialogs for every open, save, import and export. |
 | **VSPAERO results** | Results Manager plots you can drag to pan, wheel to zoom, and hover to read x and y, with light x = 0 and y = 0 axes. |
 | **VSPAERO Viewer** | A dark theme, the main 3D view's mouse controls, and PNG export at any width through the Save dialog. |
@@ -215,7 +215,10 @@ The interface, window title bars and 3D view are dark. Components draw in light 
 selected one is outlined in white. Airfoils in the XSec View show in white. The Titan Dynamics
 logo sits in the top-right corner of the 3D view, behind the model.
 
-### Moving components in the 3D view
+### Selecting and moving components in the 3D view
+
+Click a component in the 3D view to select it; **Shift**+click adds it to the selection or takes
+it out, and clicking empty space clears the selection. Dragging still turns the view.
 
 Select a component and move arrows appear at its origin, as in Blender: red X, green Y, blue Z.
 Drag an arrow to move the component along that axis; it moves in whole units. With several
