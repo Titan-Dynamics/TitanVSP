@@ -936,9 +936,9 @@ Vsp_Canvas* GroupLayout::AddCanvas( int w, int h, double xmin, double xmax, doub
     xaxis->minimum( xmin );
     xaxis->maximum( xmax );
     xaxis->label_format( "%g" );
-    xaxis->minor_grid_color( fl_gray_ramp( 20 ) );
-    xaxis->major_grid_color( fl_gray_ramp( 15 ) );
-    xaxis->label_grid_color( fl_gray_ramp( 10 ) );
+    xaxis->minor_grid_color( fl_rgb_color( 48, 51, 56 ) );
+    xaxis->major_grid_color( fl_rgb_color( 64, 68, 74 ) );
+    xaxis->label_grid_color( fl_rgb_color( 88, 93, 100 ) );
     xaxis->grid_visible( CA_MINOR_GRID|CA_MAJOR_GRID|CA_LABEL_GRID );
     xaxis->major_step( 10 );
     xaxis->label_step( 10 );
@@ -953,9 +953,9 @@ Vsp_Canvas* GroupLayout::AddCanvas( int w, int h, double xmin, double xmax, doub
     yaxis->minimum( ymin );
     yaxis->maximum( ymax );
     yaxis->label_format( "%.2f" );
-    yaxis->minor_grid_color( fl_gray_ramp( 20 ) );
-    yaxis->major_grid_color( fl_gray_ramp( 15 ) );
-    yaxis->label_grid_color( fl_gray_ramp( 10 ) );
+    yaxis->minor_grid_color( fl_rgb_color( 48, 51, 56 ) );
+    yaxis->major_grid_color( fl_rgb_color( 64, 68, 74 ) );
+    yaxis->label_grid_color( fl_rgb_color( 88, 93, 100 ) );
     yaxis->grid_visible( CA_MINOR_GRID|CA_MAJOR_GRID|CA_LABEL_GRID );
     yaxis->major_step( 10 );
     yaxis->label_step( 10 );

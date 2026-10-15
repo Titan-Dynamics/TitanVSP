@@ -628,6 +628,17 @@ VSPAEROPlotScreen::VSPAEROPlotScreen( ScreenMgr* mgr ) : TabScreen( mgr, VSPAERO
     m_UnsteadyPlotCanvas->current_x()->label_format( "%g" );
     m_UnsteadyPlotCanvas->current_y()->label_format( "%g" );
 
+    EnablePanZoom( m_ConvergencePlotCanvas, VSPAEROMgr.m_ConvergenceXMin, VSPAEROMgr.m_ConvergenceXMax, VSPAEROMgr.m_ConvergenceYMin, VSPAEROMgr.m_ConvergenceYMax,
+                   VSPAEROMgr.m_ConvergenceXMinIsManual, VSPAEROMgr.m_ConvergenceXMaxIsManual, VSPAEROMgr.m_ConvergenceYMinIsManual, VSPAEROMgr.m_ConvergenceYMaxIsManual );
+    EnablePanZoom( m_LoadDistPlotCanvas, VSPAEROMgr.m_LoadDistXMin, VSPAEROMgr.m_LoadDistXMax, VSPAEROMgr.m_LoadDistYMin, VSPAEROMgr.m_LoadDistYMax,
+                   VSPAEROMgr.m_LoadDistXMinIsManual, VSPAEROMgr.m_LoadDistXMaxIsManual, VSPAEROMgr.m_LoadDistYMinIsManual, VSPAEROMgr.m_LoadDistYMaxIsManual );
+    EnablePanZoom( m_SweepPlotCanvas, VSPAEROMgr.m_SweepXMin, VSPAEROMgr.m_SweepXMax, VSPAEROMgr.m_SweepYMin, VSPAEROMgr.m_SweepYMax,
+                   VSPAEROMgr.m_SweepXMinIsManual, VSPAEROMgr.m_SweepXMaxIsManual, VSPAEROMgr.m_SweepYMinIsManual, VSPAEROMgr.m_SweepYMaxIsManual );
+    EnablePanZoom( m_CpSlicePlotCanvas, VSPAEROMgr.m_CpSliceXMin, VSPAEROMgr.m_CpSliceXMax, VSPAEROMgr.m_CpSliceYMin, VSPAEROMgr.m_CpSliceYMax,
+                   VSPAEROMgr.m_CpSliceXMinIsManual, VSPAEROMgr.m_CpSliceXMaxIsManual, VSPAEROMgr.m_CpSliceYMinIsManual, VSPAEROMgr.m_CpSliceYMaxIsManual );
+    EnablePanZoom( m_UnsteadyPlotCanvas, VSPAEROMgr.m_UnsteadyXMin, VSPAEROMgr.m_UnsteadyXMax, VSPAEROMgr.m_UnsteadyYMin, VSPAEROMgr.m_UnsteadyYMax,
+                   VSPAEROMgr.m_UnsteadyXMinIsManual, VSPAEROMgr.m_UnsteadyXMaxIsManual, VSPAEROMgr.m_UnsteadyYMinIsManual, VSPAEROMgr.m_UnsteadyYMaxIsManual );
+
     SetDefaultView();
 
     m_PercentLegendColor = 0.8;
@@ -635,6 +646,41 @@ VSPAEROPlotScreen::VSPAEROPlotScreen( ScreenMgr* mgr ) : TabScreen( mgr, VSPAERO
 
 VSPAEROPlotScreen::~VSPAEROPlotScreen()
 {
+}
+
+// Panning or zooming a plot fixes its limits where the view is, as if each had been set by hand
+// under Actions.  A double click hands all four back to the automatic fit.
+void VSPAEROPlotScreen::EnablePanZoom( Ca_Canvas * canvas, Parm & xmin, Parm & xmax, Parm & ymin, Parm & ymax,
+                                       BoolParm & xmin_manual, BoolParm & xmax_manual, BoolParm & ymin_manual, BoolParm & ymax_manual )
+{
+    Vsp_Canvas* vc = dynamic_cast< Vsp_Canvas* >( canvas );
+    if ( !vc )
+    {
+        return;
+    }
+
+    vc->EnablePanZoom(
+        [ =, &xmin, &xmax, &ymin, &ymax, &xmin_manual, &xmax_manual, &ymin_manual, &ymax_manual ]
+        ( double x0, double x1, double y0, double y1 )
+        {
+            xmin_manual.Set( true );
+            xmax_manual.Set( true );
+            ymin_manual.Set( true );
+            ymax_manual.Set( true );
+            xmin.Set( x0 );
+            xmax.Set( x1 );
+            ymin.Set( y0 );
+            ymax.Set( y1 );
+            m_ScreenMgr->SetUpdateFlag( true );
+        },
+        [ =, &xmin_manual, &xmax_manual, &ymin_manual, &ymax_manual ]()
+        {
+            xmin_manual.Set( false );
+            xmax_manual.Set( false );
+            ymin_manual.Set( false );
+            ymax_manual.Set( false );
+            m_ScreenMgr->SetUpdateFlag( true );
+        } );
 }
 
 void VSPAEROPlotScreen::SetDefaultView()

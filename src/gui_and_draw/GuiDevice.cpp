@@ -19,6 +19,9 @@
 #include "VspUtil.h"
 #include "StringUtil.h"
 #include <cfloat>  //For DBL_EPSILON
+#include <climits>
+#include <FL/fl_draw.H>
+#include <cmath>
 
 // Xlib.h does a horrible '#define Status int' which causes problems for exprparse.
 // This should clean it up locally.
@@ -131,10 +134,153 @@ Vsp_Canvas::Vsp_Canvas( int x, int y, int w, int h, const char *label ) : Ca_Can
 {
     m_Ymain = nullptr;
     m_Ysecondary = nullptr;
+
+    m_PanZoom = false;
+    m_Hover = false;
+    m_MouseX = m_MouseY = 0;
+    m_PanX = m_PanY = 0;
+    m_PanXMin = m_PanXMax = m_PanYMin = m_PanYMax = 0.0;
+    m_PanKX = m_PanKY = 0.0;
+}
+
+void Vsp_Canvas::EnablePanZoom( std::function< void( double, double, double, double ) > view, std::function< void() > reset )
+{
+    m_PanZoom = true;
+    m_ViewCB = view;
+    m_ResetCB = reset;
+}
+
+// Inside the plotting area, inside the frame.
+bool Vsp_Canvas::InPlot( int px, int py )
+{
+    return px >= x() + Fl::box_dx( box() ) && px < x() + w() - Fl::box_dx( box() ) &&
+           py >= y() + Fl::box_dy( box() ) && py < y() + h() - Fl::box_dy( box() );
+}
+
+void Vsp_Canvas::SetView( double xmin, double xmax, double ymin, double ymax )
+{
+    Ca_Axis_* xa = current_x();
+    Ca_Axis_* ya = MainY();
+    if ( !xa || !ya || !( xmin < xmax ) || !( ymin < ymax ) ||
+         !std::isfinite( xmax - xmin ) || !std::isfinite( ymax - ymin ) )
+    {
+        return;
+    }
+
+    xa->minimum( xmin );
+    xa->maximum( xmax );
+    ya->minimum( ymin );
+    ya->maximum( ymax );
+    redraw();
+
+    if ( m_ViewCB )
+    {
+        m_ViewCB( xmin, xmax, ymin, ymax );
+    }
 }
 
 int Vsp_Canvas::handle( int event )
 {
+    if ( m_PanZoom )
+    {
+        Ca_Axis_* xa = current_x();
+        Ca_Axis_* ya = MainY();
+
+        switch ( event )
+        {
+        case FL_ENTER:
+        case FL_MOVE:
+            m_MouseX = Fl::event_x();
+            m_MouseY = Fl::event_y();
+            m_Hover = InPlot( m_MouseX, m_MouseY );
+            redraw();
+            return 1;
+
+        case FL_LEAVE:
+            m_Hover = false;
+            redraw();
+            return 1;
+
+        case FL_PUSH:
+            if ( Fl::event_button() == FL_LEFT_MOUSE && Fl::event_clicks() )
+            {
+                Fl::event_clicks( 0 );
+                if ( m_ResetCB )
+                {
+                    m_ResetCB();
+                }
+                return 1;
+            }
+            if ( xa && ya )
+            {
+                m_PanX = Fl::event_x();
+                m_PanY = Fl::event_y();
+                m_PanXMin = xa->minimum();
+                m_PanXMax = xa->maximum();
+                m_PanYMin = ya->minimum();
+                m_PanYMax = ya->maximum();
+
+                // Value per pixel.  On screen y grows downward, so ky comes out negative.
+                double dpx = xa->position( m_PanXMax ) - xa->position( m_PanXMin );
+                double dpy = ya->position( m_PanYMax ) - ya->position( m_PanYMin );
+                m_PanKX = dpx != 0.0 ? ( m_PanXMax - m_PanXMin ) / dpx : 0.0;
+                m_PanKY = dpy != 0.0 ? ( m_PanYMax - m_PanYMin ) / dpy : 0.0;
+                fl_cursor( FL_CURSOR_MOVE );
+            }
+            return 1;
+
+        case FL_DRAG:
+        {
+            double dx = ( Fl::event_x() - m_PanX ) * m_PanKX;
+            double dy = ( Fl::event_y() - m_PanY ) * m_PanKY;
+            m_MouseX = Fl::event_x();
+            m_MouseY = Fl::event_y();
+            m_Hover = InPlot( m_MouseX, m_MouseY );
+            SetView( m_PanXMin - dx, m_PanXMax - dx, m_PanYMin - dy, m_PanYMax - dy );
+            return 1;
+        }
+
+        case FL_RELEASE:
+            fl_cursor( FL_CURSOR_DEFAULT );
+            return 1;
+
+        case FL_MOUSEWHEEL:
+        {
+            if ( !xa || !ya )
+            {
+                return 1;
+            }
+            int clicks = Fl::event_dy() ? Fl::event_dy() : Fl::event_dx();
+            if ( clicks == 0 )
+            {
+                return 1;
+            }
+
+            // Zoom about the point under the cursor, which stays put.  Rolling toward you zooms out.
+            double f = std::pow( 1.2, clicks );
+            bool zx = !( Fl::event_state() & FL_SHIFT );
+            bool zy = !( Fl::event_state() & FL_CTRL );
+            double cx = xa->value( Fl::event_x() );
+            double cy = ya->value( Fl::event_y() );
+            double xmin = xa->minimum(), xmax = xa->maximum();
+            double ymin = ya->minimum(), ymax = ya->maximum();
+            if ( zx )
+            {
+                xmin = cx - ( cx - xmin ) * f;
+                xmax = cx + ( xmax - cx ) * f;
+            }
+            if ( zy )
+            {
+                ymin = cy - ( cy - ymin ) * f;
+                ymax = cy + ( ymax - cy ) * f;
+            }
+            SetView( xmin, xmax, ymin, ymax );
+            return 1;
+        }
+        }
+        return Ca_Canvas::handle( event );
+    }
+
     switch ( event )
     {
     case FL_PUSH:
@@ -148,6 +294,75 @@ int Vsp_Canvas::handle( int event )
         break;
     }
     return Ca_Canvas::handle( event );
+}
+
+// The x and y axes -- the lines x = 0 and y = 0 -- in a light colour over the grid, so they stand
+// out on the dark background.
+void Vsp_Canvas::draw_underlay()
+{
+    Ca_Axis_* xa = current_x();
+    Ca_Axis_* ya = MainY();
+    if ( !xa || !ya )
+    {
+        return;
+    }
+
+    int x0 = x() + Fl::box_dx( box() ), y0 = y() + Fl::box_dy( box() );
+    int x1 = x() + w() - Fl::box_dx( box() ), y1 = y() + h() - Fl::box_dy( box() );
+
+    fl_push_clip( x0, y0, x1 - x0, y1 - y0 );
+    fl_color( fl_rgb_color( 200, 204, 210 ) );
+    fl_line_style( FL_SOLID, 2 );
+    if ( xa->minimum() < 0.0 && xa->maximum() > 0.0 )
+    {
+        int px = (int)xa->position( 0.0 );
+        fl_line( px, y0, px, y1 );
+    }
+    if ( ya->minimum() < 0.0 && ya->maximum() > 0.0 )
+    {
+        int py = (int)ya->position( 0.0 );
+        fl_line( x0, py, x1, py );
+    }
+    fl_line_style( 0 );
+    fl_pop_clip();
+}
+
+// The plot, then a crosshair and the coordinates under the cursor.
+void Vsp_Canvas::draw()
+{
+    Ca_Canvas::draw();
+
+    Ca_Axis_* xa = current_x();
+    Ca_Axis_* ya = MainY();
+    if ( !m_PanZoom || !m_Hover || !xa || !ya || !InPlot( m_MouseX, m_MouseY ) )
+    {
+        return;
+    }
+
+    int x0 = x() + Fl::box_dx( box() ), y0 = y() + Fl::box_dy( box() );
+    int x1 = x() + w() - Fl::box_dx( box() ), y1 = y() + h() - Fl::box_dy( box() );
+    fl_push_clip( x0, y0, x1 - x0, y1 - y0 );
+
+    fl_color( fl_rgb_color( 150, 154, 160 ) );
+    fl_line_style( FL_DOT, 1 );
+    fl_line( m_MouseX, y0, m_MouseX, y1 );
+    fl_line( x0, m_MouseY, x1, m_MouseY );
+    fl_line_style( 0 );
+
+    char buf[128];
+    snprintf( buf, sizeof( buf ), "x = %.5g    y = %.5g", xa->value( m_MouseX ), ya->value( m_MouseY ) );
+    fl_font( FL_HELVETICA, 14 );
+    int tw = 0, th = 0;
+    fl_measure( buf, tw, th, 0 );
+    int bx = x1 - tw - 18, by = y0 + 8;
+    fl_color( fl_rgb_color( 24, 26, 29 ) );
+    fl_rectf( bx, by, tw + 12, th + 8 );
+    fl_color( fl_rgb_color( 90, 94, 100 ) );
+    fl_rect( bx, by, tw + 12, th + 8 );
+    fl_color( fl_rgb_color( 235, 237, 240 ) );
+    fl_draw( buf, bx + 6, by + 4 + th - fl_descent() );
+
+    fl_pop_clip();
 }
 
 void Vsp_Canvas::resize( int X, int Y, int W, int H )
@@ -2577,8 +2792,9 @@ void IndexSelector::SetValAndLimits( Parm* parm_ptr )
 {
     assert( m_Input );
 
-    int min_limit = (int)(parm_ptr->GetLowerLimit() + 0.5 );
-    int max_limit = (int)(parm_ptr->GetUpperLimit() + 0.5 );
+    // Limits such as 1e12 are past what an int holds, and would wrap to INT_MIN.
+    int min_limit = (int)( std::max( std::min( parm_ptr->GetLowerLimit(), (double)INT_MAX ), (double)INT_MIN ) + 0.5 );
+    int max_limit = (int)( std::max( std::min( parm_ptr->GetUpperLimit(), (double)INT_MAX - 1 ), (double)INT_MIN ) + 0.5 );
 
     SetMinMaxLimits( min_limit, max_limit );
 

@@ -12,6 +12,7 @@ component, so OpenVSP models and scripts work as they are.
 - [Dark theme](#dark-theme)
 - [Perspective view](#perspective-view)
 - [Windows file dialog](#windows-file-dialog)
+- [VSPAERO results plots](#vspaero-results-plots)
 - [TitanVSP name](#titanvsp-name)
 - [Windows build scripts and Python API](#windows-build-scripts-and-python-api)
 - [Removed](#removed)
@@ -96,6 +97,28 @@ replaced.
 Open, save, import and export use the operating system's own file dialog by default, instead of
 OpenVSP's built-in chooser. The built-in one, with its favourite folders, is still available under
 **File → Preferences… → File Chooser**. A choice already saved there is kept.
+
+## VSPAERO results plots
+
+The plots in **Results Manager - VSPAERO** (Convergence, Load Dist., Sweep, Cp Slice and
+Unsteady) can be explored with the mouse:
+
+- **Pan:** drag the plot.
+- **Zoom:** roll the mouse wheel to zoom in or out about the point under the cursor. Hold
+  **Ctrl** to zoom only along x, or **Shift** to zoom only along y.
+- **Reset:** double-click to go back to the automatic fit.
+- **Read values:** hovering shows a crosshair and the x and y under the cursor in the plot's
+  top-right corner.
+
+Panning or zooming sets the plot's Xmin, Xmax, Ymin and Ymax under **Actions** to manual at the
+new limits, so the view stays put when the plot refreshes. Unticking them, or double-clicking,
+hands them back to the automatic fit.
+
+The lines x = 0 and y = 0 draw light over the grid, and the grid is shaded for the dark
+background. This applies to every plot that uses the same graph widget, such as Wave Drag.
+
+The greyed-out Time Step box could show -2147483648 instead of 0 when there are no unsteady
+results. That upstream bug, an overflowing conversion of the box's limits, is fixed.
 
 ## TitanVSP name
 

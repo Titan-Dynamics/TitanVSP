@@ -90,6 +90,7 @@ class Ca_Canvas:public Fl_Box{
 
 public:
     void draw();
+    virtual void draw_underlay(){};  // Drawn over the grid, under the plotted objects.
     static Ca_Canvas * current(){return current_;};
     static void current(Ca_Canvas * _current){current_=_current;}
     void current_x(Ca_Axis_ * axis){current_x_=axis;};

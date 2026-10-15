@@ -1082,6 +1082,7 @@ void Ca_Canvas::draw(){
         axis->draw_grid();
       axis=axis->previous_axis_;
     }
+    draw_underlay();
   }
 
   fl_clip(x()+Fl::box_dx(box())+dx_, y()+Fl::box_dy(box())+border_+dy_, w()-Fl::box_dw(box()) - dw_, h()-Fl::box_dh(box()) - dh_);

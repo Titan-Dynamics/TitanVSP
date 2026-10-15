@@ -58,6 +58,8 @@ protected:
     static string MakeAxisLabelStr( const vector <string> &dataSetNames );
     static void UpdateAxisLimits( Ca_Canvas * canvas, const vector <double> &xDoubleData, const vector <double> &yDoubleData, bool expand_only );
     static void UpdateSingleAxisLimits( Ca_Axis_ * tAxis, const vector <double> &doubleData, bool expandOnly, bool keepZero = false );
+    void EnablePanZoom( Ca_Canvas * canvas, Parm & xmin, Parm & xmax, Parm & ymin, Parm & ymax,
+                        BoolParm & xmin_manual, BoolParm & xmax_manual, BoolParm & ymin_manual, BoolParm & ymax_manual );
     //  general utility
     static void ConstructFlowConditionString( char *strbuf, size_t str_siz, Results *res, bool includeResultId, bool include_recref );
 

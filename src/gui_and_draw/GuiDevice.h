@@ -32,6 +32,8 @@
 
 #include "Cartesian.H"
 
+#include <functional>
+
 #include "Vec3d.h"
 #include "Parm.h"
 #include "Vehicle.h"
@@ -127,6 +129,14 @@ public:
     Vsp_Canvas(int x, int y, int w, int h, const char *label=0);
 
     int handle( int event );
+    void draw();
+    void draw_underlay();
+
+    // Pan by dragging, zoom with the wheel (Ctrl: x only, Shift: y only), and show the coordinates
+    // under the cursor.  view is told the new limits after each pan or zoom; a double click calls
+    // reset.  Without this the canvas passes mouse clicks and drags to its callback.
+    void EnablePanZoom( std::function< void( double xmin, double xmax, double ymin, double ymax ) > view,
+                        std::function< void() > reset );
 
     virtual void resize(int x, int y, int w, int h);
 
@@ -140,6 +150,23 @@ public:
 
     int m_Wwide;
     int m_Wnarrow;
+
+protected:
+    Ca_Axis_* MainY()                       { return m_Ymain ? m_Ymain : current_y(); }
+    bool InPlot( int px, int py );
+    void SetView( double xmin, double xmax, double ymin, double ymax );
+
+    bool m_PanZoom;
+    std::function< void( double, double, double, double ) > m_ViewCB;
+    std::function< void() > m_ResetCB;
+
+    bool m_Hover;
+    int m_MouseX, m_MouseY;
+
+    // Where a drag started, and the limits and value per pixel then.
+    int m_PanX, m_PanY;
+    double m_PanXMin, m_PanXMax, m_PanYMin, m_PanYMax;
+    double m_PanKX, m_PanKY;
 };
 
 
