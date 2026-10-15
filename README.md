@@ -218,7 +218,8 @@ logo sits in the top-right corner of the 3D view, behind the model.
 ### Selecting and moving components in the 3D view
 
 Click a component in the 3D view to select it; **Shift**+click adds it to the selection or takes
-it out, and clicking empty space clears the selection. Dragging still turns the view.
+it out, and clicking empty space clears the selection. Dragging still turns the view. Blanks show
+as small balls, ringed when selected; click one to select it.
 
 Select a component and move arrows appear at its origin, as in Blender: red X, green Y, blue Z.
 Drag an arrow to move the component along that axis; it moves in whole units. With several

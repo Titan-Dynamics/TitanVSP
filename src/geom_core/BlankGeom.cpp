@@ -116,6 +116,11 @@ void BlankGeom::BuildMarkerDrawObjs( Geom* placer, vector< DrawObj > &marker_vec
         marker_vec[ i ].m_GeomID = placer->GetID() + "_Feature_" + std::to_string( i );
         marker_vec[ i ].m_LineWidth = 2.0;
         marker_vec[ i ].m_Type = DrawObj::VSP_LINES;
+
+        // TitanVSP: the main window draws a Blank as a ball (VspGlWindow::BlankDraw).  The triad
+        // stays, fully transparent, because the Geom Browser's Pick mode picks a Blank by it:
+        // the pick pass draws it in its pick colour, the normal pass drops it.
+        marker_vec[ i ].m_LineAlpha = 0.0;
     }
 
     vector< Matrix4d > trans_vec = placer->GetTransMatVec();
@@ -154,7 +159,8 @@ void BlankGeom::LoadDrawObjs(vector< DrawObj* > & draw_obj_vec)
 
     snprintf( str, sizeof( str ), "%d",1);
     m_HighlightDrawObj.m_GeomID = m_ID+string(str);
-    m_HighlightDrawObj.m_Visible = GetSetFlag( vsp::SET_SHOWN ) && isactive;
+    // TitanVSP: the ball's selection ring replaces the selection point.
+    m_HighlightDrawObj.m_Visible = false;
 
     // Set Render Destination to Main VSP Window.
     m_HighlightDrawObj.m_Screen = DrawObj::VSP_MAIN_SCREEN;

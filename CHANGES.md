@@ -26,7 +26,7 @@ length unit. Models keep whatever they were saved with.
 
 | Release | What's in it |
 | --- | --- |
-| Not yet released (`main`) | The move arrows and click-to-select in the 3D view. |
+| Not yet released (`main`) | The move arrows, click-to-select, and Blanks drawn as balls in the 3D view. |
 | [v3.55.0-titan.4](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.4) | Everything else on this page. |
 | v3.55.0-titan.3 (withdrawn) | titan.4 without the VSPAERO Viewer changes, the logo, STL export resolution, STEP and IGES in millimetres, and the Fillet's TE Taper default of 0.75. Replaced by titan.4. |
 | v3.55.0-titan.2 (withdrawn) | titan.3 without the VSPAERO results plot changes. Replaced by titan.3. |
@@ -103,6 +103,12 @@ Browser, and opens its window. **Shift**+click adds it to the selection, or take
 empty space clears the selection. A click is a press and release that hardly moves, so dragging
 to turn the view works as before, anywhere. It uses the same picking as the Geom Browser's
 **Pick** button, but only for the click, so nothing highlights as the mouse passes over.
+
+**Blanks.** A Blank component has no surface; it used to show as a small axis triad. It's now a
+small shaded ball at its origin (and at each symmetric copy), half transparent and the same size on
+screen whatever the zoom or window, with a white ring round it when selected. Clicking the ball
+selects the Blank. In a single viewport the ball hides behind parts in front of it. The Geom
+Browser's **Pick** mode still picks Blanks by their (now invisible) triad.
 
 **Move arrows.** Selecting components shows Blender-style move arrows at their origin: red X, green
 Y and blue Z, at a fixed size on screen, drawn over the model. Drag an arrow with the left mouse

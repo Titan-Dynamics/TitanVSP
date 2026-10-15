@@ -213,6 +213,13 @@ private:
     // A left click -- pressed and released without dragging -- on a component selects it; with
     // Shift it's added to or taken out of the selection; on empty space it clears the selection.
     void ClickSelect( int x, int y, bool toggle );
+
+    //==== TitanVSP: Blanks as balls ====//
+    // A Blank has no surface, so it's drawn as a small shaded ball at its origin -- a fixed size on
+    // screen -- with a ring round it when it's selected.  BlankHit finds the Blank whose ball is
+    // under ( x, y ), for clicking.
+    void BlankDraw();
+    string BlankHit( int x, int y );
     bool m_ClickCandidate;
     int m_ClickX, m_ClickY;
 

@@ -193,6 +193,7 @@ void VspGlWindow::draw()
 
     m_GEngine->draw( m_mouse_x, m_mouse_y );
 
+    BlankDraw();
     GizmoDraw();
 }
 
@@ -3240,6 +3241,234 @@ void VspGlWindow::GizmoDraw()
     glUseProgram( program );
 }
 
+//==== TitanVSP: Blanks as balls ====//
+
+namespace
+{
+const float BLANK_RADIUS = 7.0f;       // Ball radius, in screen points.
+const float BLANK_RING = 14.0f;        // Selection ring radius.
+const float BLANK_ALPHA = 0.5f;        // The ball's opacity.
+
+// Every shown Blank, with each symmetric copy's origin.
+struct BlankOrigins
+{
+    Geom * m_Geom;
+    vector< vec3d > m_Origins;
+};
+
+vector< BlankOrigins > ShownBlanks()
+{
+    vector< BlankOrigins > out;
+    Vehicle * veh = VehicleMgr.GetVehicle();
+    if ( !veh )
+    {
+        return out;
+    }
+    for ( Geom * g : veh->FindGeomVec( veh->GetGeomVec() ) )
+    {
+        if ( !g || g->GetType().m_Type != BLANK_GEOM_TYPE || !g->GetSetFlag( vsp::SET_SHOWN ) )
+        {
+            continue;
+        }
+        BlankOrigins b;
+        b.m_Geom = g;
+        for ( const Matrix4d & m : g->GetTransMatVec() )
+        {
+            b.m_Origins.push_back( m.getTranslation() );
+        }
+        if ( !b.m_Origins.empty() )
+        {
+            out.push_back( b );
+        }
+    }
+    return out;
+}
+}
+
+// Drawn after the scene, in each viewport.  With one viewport the balls are depth tested against
+// the model, so a Blank behind a part is hidden by it; with several, the scene's depth is only
+// kept for the last viewport drawn, so they're drawn over everything.
+void VspGlWindow::BlankDraw()
+{
+    if ( m_LinkedScreen != DrawObj::VSP_MAIN_SCREEN || !m_GEngine )
+    {
+        return;
+    }
+    vector< BlankOrigins > blanks = ShownBlanks();
+    if ( blanks.empty() )
+    {
+        return;
+    }
+    Vehicle * veh = VehicleMgr.GetVehicle();
+    std::vector< VSPGraphic::Viewport * > vps = m_GEngine->getDisplay()->getLayoutMgr()->getViewports();
+    bool depth = vps.size() == 1;
+
+    float ppu = pixels_per_unit();
+    float r = BLANK_RADIUS * ppu;
+    float rr = BLANK_RING * ppu;
+
+    GLint program = 0;
+    glGetIntegerv( GL_CURRENT_PROGRAM, &program );
+    glUseProgram( 0 );
+
+    glPushAttrib( GL_ALL_ATTRIB_BITS );
+    glDisable( GL_LIGHTING );
+    glDisable( GL_TEXTURE_2D );
+    glDisable( GL_CULL_FACE );
+    glDisable( GL_ALPHA_TEST );
+    glEnable( GL_BLEND );
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    glShadeModel( GL_SMOOTH );
+    glEnable( GL_LINE_SMOOTH );
+    glDepthMask( GL_FALSE );
+    if ( depth )
+    {
+        glEnable( GL_DEPTH_TEST );
+        glDepthFunc( GL_LEQUAL );
+    }
+    else
+    {
+        glDisable( GL_DEPTH_TEST );
+    }
+
+    glViewport( 0, 0, pixel_w(), pixel_h() );
+    glMatrixMode( GL_PROJECTION );
+    glPushMatrix();
+    glLoadIdentity();
+    // Window x and y in pixels, and z = -depth, so a vertex at a projected point's window depth
+    // lands on that depth in the depth buffer.
+    glOrtho( 0, pixel_w(), 0, pixel_h(), 0, 1 );
+    glMatrixMode( GL_MODELVIEW );
+    glPushMatrix();
+    glLoadIdentity();
+
+    glEnable( GL_SCISSOR_TEST );
+
+    const int nseg = 32;
+    for ( VSPGraphic::Viewport * vp : vps )
+    {
+        VSPGraphic::Camera * cam = vp ? vp->getCamera() : nullptr;
+        if ( !cam || vp->width() <= 0 || vp->height() <= 0 )
+        {
+            continue;
+        }
+        glScissor( vp->x(), vp->y(), vp->width(), vp->height() );
+
+        glm::mat4 mv = cam->getModelViewMatrix();
+        glm::mat4 pr = cam->getProjectionMatrix();
+        glm::vec4 view( vp->x(), vp->y(), vp->width(), vp->height() );
+
+        for ( const BlankOrigins & b : blanks )
+        {
+            bool selected = veh && veh->IsGeomActive( b.m_Geom->GetID() );
+
+            vec3d wc = b.m_Geom->m_GuiDraw.GetWireColor() / 255.0;
+            float c[3] = { ( float )wc.x(), ( float )wc.y(), ( float )wc.z() };
+            if ( selected )
+            {
+                for ( float & ch : c )
+                {
+                    ch = ch + ( 1.0f - ch ) / 3.0f;
+                }
+            }
+
+            for ( const vec3d & o : b.m_Origins )
+            {
+                glm::vec3 w = glm::project( glm::vec3( o.x(), o.y(), o.z() ), mv, pr, view );
+                if ( w.z < 0.0f || w.z > 1.0f )
+                {
+                    continue;
+                }
+                float z = -( w.z - 1.0e-4f );
+
+                // The ball: lit from the upper left, fading to a darker rim.
+                glBegin( GL_TRIANGLE_FAN );
+                glColor4f( std::min( c[0] * 1.3f + 0.15f, 1.0f ), std::min( c[1] * 1.3f + 0.15f, 1.0f ),
+                           std::min( c[2] * 1.3f + 0.15f, 1.0f ), BLANK_ALPHA );
+                glVertex3f( w.x - 0.3f * r, w.y + 0.3f * r, z );
+                glColor4f( c[0] * 0.5f, c[1] * 0.5f, c[2] * 0.5f, BLANK_ALPHA );
+                for ( int k = 0; k <= nseg; k++ )
+                {
+                    float t = 2.0f * 3.14159265f * k / nseg;
+                    glVertex3f( w.x + r * std::cos( t ), w.y + r * std::sin( t ), z );
+                }
+                glEnd();
+
+                // A fine dark edge, so the ball reads on a light background too.
+                glColor4f( 0.0f, 0.0f, 0.0f, 0.5f * BLANK_ALPHA );
+                glLineWidth( 1.0f * ppu );
+                glBegin( GL_LINE_LOOP );
+                for ( int k = 0; k < nseg; k++ )
+                {
+                    float t = 2.0f * 3.14159265f * k / nseg;
+                    glVertex3f( w.x + r * std::cos( t ), w.y + r * std::sin( t ), z );
+                }
+                glEnd();
+
+                if ( selected )
+                {
+                    glColor4f( 1.0f, 1.0f, 1.0f, 0.75f );
+                    glLineWidth( 2.0f * ppu );
+                    glBegin( GL_LINE_LOOP );
+                    for ( int k = 0; k < nseg; k++ )
+                    {
+                        float t = 2.0f * 3.14159265f * k / nseg;
+                        glVertex3f( w.x + rr * std::cos( t ), w.y + rr * std::sin( t ), z );
+                    }
+                    glEnd();
+                }
+            }
+        }
+    }
+
+    glMatrixMode( GL_PROJECTION );
+    glPopMatrix();
+    glMatrixMode( GL_MODELVIEW );
+    glPopMatrix();
+    glPopAttrib();
+
+    glUseProgram( program );
+}
+
+// The Blank whose ball is nearest ( x, y ) in the selected viewport, within a few points of it.
+string VspGlWindow::BlankHit( int x, int y )
+{
+    if ( m_LinkedScreen != DrawObj::VSP_MAIN_SCREEN || !m_GEngine )
+    {
+        return string();
+    }
+    VSPGraphic::Viewport * vp = m_GEngine->getDisplay()->getViewport();
+    VSPGraphic::Camera * cam = vp ? vp->getCamera() : nullptr;
+    if ( !cam )
+    {
+        return string();
+    }
+    glm::mat4 mv = cam->getModelViewMatrix();
+    glm::mat4 pr = cam->getProjectionMatrix();
+    glm::vec4 view( vp->x(), vp->y(), vp->width(), vp->height() );
+
+    string best;
+    float bestd = ( BLANK_RADIUS + 4.0f ) * pixels_per_unit();
+    for ( const BlankOrigins & b : ShownBlanks() )
+    {
+        for ( const vec3d & o : b.m_Origins )
+        {
+            glm::vec3 w = glm::project( glm::vec3( o.x(), o.y(), o.z() ), mv, pr, view );
+            if ( w.z < 0.0f || w.z > 1.0f )
+            {
+                continue;
+            }
+            float d = glm::length( glm::vec2( w.x - x, w.y - y ) );
+            if ( d < bestd )
+            {
+                bestd = d;
+                best = b.m_Geom->GetID();
+            }
+        }
+    }
+    return best;
+}
+
 //==== TitanVSP: click to select ====//
 // Picks what's under ( x, y ) the way the Geom Browser's Pick mode does, but only for this click:
 // the browser offers every visible component for picking, the scene is rebuilt with them and
@@ -3255,6 +3484,9 @@ void VspGlWindow::ClickSelect( int x, int y, bool toggle )
     }
 
     make_current();
+
+    // A Blank's ball is small and drawn over its surroundings; it wins if it's under the click.
+    string blank = BlankHit( x, y );
 
     geomScreen->SetClickPick( true );
     update();
@@ -3283,6 +3515,11 @@ void VspGlWindow::ClickSelect( int x, int y, bool toggle )
 
     geomScreen->SetClickPick( false );
     update();
+
+    if ( !blank.empty() )
+    {
+        picked = blank;
+    }
 
     vector< string > sel = veh->GetActiveGeomVec();
     if ( !picked.empty() && !veh->FindGeom( picked ) )

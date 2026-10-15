@@ -248,6 +248,18 @@ object ID, less the suffix after the last `_`, is the component's ID (as in `_se
 Pick mode then goes off again and the scene is rebuilt without the pickables, so dragging still
 rotates and nothing highlights on hover. `ManageGeomScreen::SetSelection` applies the result.
 
+## Blanks as balls
+
+`VspGlWindow::BlankDraw` draws every shown `BLANK_GEOM_TYPE` component as a half-transparent shaded
+disc at each of its origins (`GetTransMatVec()` translations), a fixed size in screen points, with
+a white ring when selected. It projects through each viewport's camera into window pixels and, with
+one viewport, depth-tests against the scene (`glOrtho( 0, W, 0, H, 0, 1 )`, vertex z = -window
+depth); with several, the scene's depth only survives for the last viewport, so it doesn't test.
+`BlankHit` finds a ball under the cursor for `ClickSelect`, which prefers it over the colour pick.
+`BlankGeom` keeps its axis triad (the Geom Browser's Pick mode picks a Blank by it) but at
+`m_LineAlpha` 0, which the normal pass's alpha test drops and the pick pass doesn't, and no longer
+shows its selection point.
+
 ## Move arrows
 
 The Blender-style move gizmo lives in `VspGlWindow` (`MainGLWindow.cpp`, the `Gizmo*` methods),
