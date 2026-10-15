@@ -208,6 +208,11 @@ header comment gives the outline; this section covers what you need to change it
   (immersive dark mode) once per new top-level window.
 - **3D view:** the default background (38, 41, 46) is in `vsp_graphic/src/Background.cpp`.
   Axis, origin and colour-scale label colours are in `Viewport.cpp`.
+- **Logo:** `Display::showLogo( true )` (set for the main window only, in `MainVSPScreen`) loads
+  the logo once per window into a mipmapped texture, and `LayoutMgr` has each viewport draw it
+  (`Viewport::drawLogo`) right after the background. The PNG's bytes are embedded in
+  `vsp_graphic/include/TitanLogo.h`; to change the logo, regenerate that header from the new PNG
+  (a `static const unsigned char TITAN_LOGO_PNG[]` of the file's bytes and its size).
 - **Line colours:** the default component colour is `Color::Color()` in
   `geom_core/Color.cpp` (170, 170, 170). Selection highlights are in `Geom.cpp` (bounding box,
   active XSec, active sub-surface), `PickableGeom.cpp` and `Viewport::drawBorder`. The XSec View's

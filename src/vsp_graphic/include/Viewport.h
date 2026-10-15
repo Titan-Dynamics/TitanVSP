@@ -86,6 +86,11 @@ public:
     * Draw Watermark.
     */
     virtual void drawWatermark();
+    /*!
+    * Draw the Titan Dynamics logo, texture texId of texW x texH, in the top right corner
+    * behind the scene (TitanVSP).
+    */
+    virtual void drawLogo( unsigned int texId, int texW, int texH );
 
 public:
     /*!

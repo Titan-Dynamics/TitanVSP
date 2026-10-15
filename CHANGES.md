@@ -72,6 +72,9 @@ The whole interface is dark.
   selection. Section divider bars, read-only fields, tooltips, the console, the attribute tree
   and the CompGeom and DegenGeom result panels all follow the theme.
 - **Title bars:** every window asks Windows for a dark title bar (Windows 10 and later).
+- **Logo:** the Titan Dynamics logo sits in the top-right corner of the 3D view, behind the
+  model, about a fifth of the view's width. It's built into the program, so there's no file to
+  keep with it, and it scales smoothly at any window size. Only the main 3D view shows it.
 - **3D view:** the default background is dark slate. Axis labels and colour-scale labels are
   light. **Reset** in Background settings goes back to the dark default.
 - **Line colours:** new components draw in light grey (#aaa) instead of blue. Cross-section and

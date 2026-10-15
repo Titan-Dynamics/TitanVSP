@@ -118,8 +118,21 @@ public:
         _starty = y;
     }
 
+    /*!
+    * The logo texture to draw behind each viewport, or 0 for none (TitanVSP).
+    */
+    void setLogo( unsigned int texId, int width, int height )
+    {
+        _logoTex = texId;
+        _logoW = width;
+        _logoH = height;
+    }
+
 protected:
     std::vector<Viewport *> _viewportList;
+
+    unsigned int _logoTex;
+    int _logoW, _logoH;
 
 private:
     int _row;

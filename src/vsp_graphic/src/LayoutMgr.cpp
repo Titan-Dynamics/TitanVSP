@@ -25,6 +25,9 @@ LayoutMgr::LayoutMgr( int row, int column )
 
     _startx = _starty = -1;
 
+    _logoTex = 0;
+    _logoW = _logoH = 0;
+
     std::vector < Common::VSPenum > vOrder;
     // Set View order for viewports.
     // Note:  Changes here should be matched in MainVSPScreen::ResetViews()
@@ -195,6 +198,10 @@ void LayoutMgr::draw( Scene * scene, int x, int y )
         // Draw Background
         glDisable( GL_DEPTH_TEST );
         _viewportList[i]->drawBackground();
+        if ( _logoTex )
+        {
+            _viewportList[i]->drawLogo( _logoTex, _logoW, _logoH );
+        }
 
         glClear( GL_DEPTH_BUFFER_BIT );
 

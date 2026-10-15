@@ -7,6 +7,9 @@
 
 #include <assert.h>
 
+#include "stb_image.h"
+#include "TitanLogo.h"
+
 namespace VSPGraphic
 {
 static float _screenSizeDiffRatio;
@@ -17,6 +20,11 @@ Display::Display()
     _currLayout = _layoutList[0];
 
     _screenSizeDiffRatio = 1.0;
+
+    _showLogo = false;
+    _logoTried = false;
+    _logoTex = 0;
+    _logoW = _logoH = 0;
 }
 Display::~Display()
 {
@@ -119,7 +127,52 @@ void Display::predraw( Scene * scene, int x, int y )
 
 void Display::draw( Scene * scene, int x, int y )
 {
+    if( _showLogo && !_logoTried )
+    {
+        _loadLogo();
+    }
+    _currLayout->setLogo( _showLogo ? _logoTex : 0, _logoW, _logoH );
+
     _currLayout->draw( scene, x, y );
+}
+
+// The logo, decoded from the PNG built into the program into a mipmapped texture.  Made once, the
+// first time it's drawn, when the window's OpenGL context is current.
+void Display::_loadLogo()
+{
+    _logoTried = true;
+
+    int w = 0, h = 0, n = 0;
+    unsigned char * data = stbi_load_from_memory( TITAN_LOGO_PNG, ( int )TITAN_LOGO_PNG_SIZE, &w, &h, &n, 4 );
+    if( !data )
+    {
+        return;
+    }
+
+    // The logo is white; only its alpha says where.  Making every pixel white keeps the
+    // see-through ones from darkening its edges when the texture is filtered.
+    for( int i = 0; i < w * h; i++ )
+    {
+        data[4 * i] = data[4 * i + 1] = data[4 * i + 2] = 255;
+    }
+
+    GLuint tex = 0;
+    glGenTextures( 1, &tex );
+    glBindTexture( GL_TEXTURE_2D, tex );
+    glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
+    glGenerateMipmap( GL_TEXTURE_2D );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+    glBindTexture( GL_TEXTURE_2D, 0 );
+
+    stbi_image_free( data );
+
+    _logoTex = tex;
+    _logoW = w;
+    _logoH = h;
 }
 
 void Display::center()

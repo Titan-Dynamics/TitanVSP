@@ -204,6 +204,7 @@ MainVSPScreen::MainVSPScreen( ScreenMgr* mgr ) : ActionScreen( mgr )
     int glw = m_GenLayout.GetW() - GL_WINDOW_DX;
 
     m_GlWin = new VSPGUI::VspGlWindow( m_GenLayout.GetX(), m_GenLayout.GetY(), glw, glh, mgr, DrawObj::VSP_MAIN_SCREEN );
+    m_GlWin->getGraphicEngine()->getDisplay()->showLogo( true );   // TitanVSP: only the main view.
 
     m_GenLayout.GetGroup()->add( m_GlWin );
     m_GenLayout.GetGroup()->resizable( m_GlWin );

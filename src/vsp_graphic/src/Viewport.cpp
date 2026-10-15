@@ -4,6 +4,8 @@
 #include "glm/ext.hpp"
 
 #include "Viewport.h"
+
+#include <algorithm>
 #include "TextMgr.h"
 
 #include "Camera.h"
@@ -443,6 +445,70 @@ void Viewport::drawBackground()
 
     _background->setWidthHeight( _vWidth, _vHeight );
     _background->draw();
+}
+
+//==== Titan Dynamics logo ====//
+// TitanVSP: the logo in the top right corner, behind the model.  It is about a
+// fifth of the view's width, held to a sensible size on small and large windows, with a margin
+// from the corner.  The texture is mipmapped, so it stays smooth at whatever size it's drawn.
+void Viewport::drawLogo( unsigned int texId, int texW, int texH )
+{
+    if( _vWidth <= 0 || _vHeight <= 0 || texId == 0 || texW <= 0 || texH <= 0 )
+    {
+        return;
+    }
+
+    float w = std::min( std::max( 0.18f * _vWidth, 160.0f ), 400.0f );
+    w = std::min( w, 0.4f * _vWidth );
+    float h = w * texH / (float)texW;
+    float pad = std::min( std::max( 0.02f * std::min( _vWidth, _vHeight ), 12.0f ), 32.0f );
+
+    float x1 = _vWidth - pad;
+    float x0 = x1 - w;
+    float y1 = _vHeight - pad;      // Pixels from the bottom.
+    float y0 = y1 - h;
+
+    GLint program = 0;
+    glGetIntegerv( GL_CURRENT_PROGRAM, &program );
+    glUseProgram( 0 );
+
+    glPushAttrib( GL_ENABLE_BIT | GL_CURRENT_BIT | GL_DEPTH_BUFFER_BIT | GL_TEXTURE_BIT );
+    glDisable( GL_DEPTH_TEST );
+    glDepthMask( GL_FALSE );
+    glDisable( GL_LIGHTING );
+    glEnable( GL_BLEND );
+    glEnable( GL_TEXTURE_2D );
+    glBindTexture( GL_TEXTURE_2D, texId );
+    glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+
+    glMatrixMode( GL_PROJECTION );
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho( 0, _vWidth, 0, _vHeight, -1, 1 );
+
+    glMatrixMode( GL_MODELVIEW );
+    glPushMatrix();
+    glLoadIdentity();
+
+    glColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+
+    // The image's first row is its top.
+    glBegin( GL_QUADS );
+    glTexCoord2f( 0.0f, 1.0f ); glVertex2f( x0, y0 );
+    glTexCoord2f( 1.0f, 1.0f ); glVertex2f( x1, y0 );
+    glTexCoord2f( 1.0f, 0.0f ); glVertex2f( x1, y1 );
+    glTexCoord2f( 0.0f, 0.0f ); glVertex2f( x0, y1 );
+    glEnd();
+
+    glMatrixMode( GL_PROJECTION );
+    glPopMatrix();
+    glMatrixMode( GL_MODELVIEW );
+    glPopMatrix();
+
+    glBindTexture( GL_TEXTURE_2D, 0 );
+    glPopAttrib();
+
+    glUseProgram( program );
 }
 
 void Viewport::drawWatermark()

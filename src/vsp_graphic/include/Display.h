@@ -238,10 +238,26 @@ public:
       */
     virtual glm::vec3 getCOR();
 
+    /*!
+    * Show the Titan Dynamics logo in the top right of each viewport (TitanVSP).  Off unless a
+    * window asks; the main 3D view does.
+    */
+    void showLogo( bool show )
+    {
+        _showLogo = show;
+    }
+
 protected:
     std::vector<LayoutMgr *> _layoutList;
 
 private:
+    void _loadLogo();
+
+    bool _showLogo;
+    bool _logoTried;
+    unsigned int _logoTex;
+    int _logoW, _logoH;
+
     LayoutMgr * _currLayout;
     int _origWidth;
     int _origHeight;
