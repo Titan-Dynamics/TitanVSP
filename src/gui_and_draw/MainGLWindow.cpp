@@ -84,6 +84,12 @@ VspGlWindow::VspGlWindow( int x, int y, int w, int h, ScreenMgr * mgr, DrawObj::
 
     m_ClickCandidate = false;
     m_ClickX = m_ClickY = 0;
+
+    // Blanks are drawn in each viewport right after its scene, so parts in front hide them.
+    if ( m_LinkedScreen == DrawObj::VSP_MAIN_SCREEN )
+    {
+        m_GEngine->getDisplay()->setSceneOverlay( [this]( VSPGraphic::Viewport * vp ) { BlankDraw( vp ); } );
+    }
     m_GizmoPx = 1.0f;
     m_GizmoSteps = 0;
     m_GizmoUndoSaved = false;
@@ -193,7 +199,6 @@ void VspGlWindow::draw()
 
     m_GEngine->draw( m_mouse_x, m_mouse_y );
 
-    BlankDraw();
     GizmoDraw();
 }
 
@@ -3285,12 +3290,11 @@ vector< BlankOrigins > ShownBlanks()
 }
 }
 
-// Drawn after the scene, in each viewport.  With one viewport the balls are depth tested against
-// the model, so a Blank behind a part is hidden by it; with several, the scene's depth is only
-// kept for the last viewport drawn, so they're drawn over everything.
-void VspGlWindow::BlankDraw()
+// Drawn in viewport vp right after its scene (LayoutMgr's scene overlay), depth-tested against
+// it, so a Blank behind a part is hidden by it as the part's own surfaces would be.
+void VspGlWindow::BlankDraw( VSPGraphic::Viewport * vp )
 {
-    if ( m_LinkedScreen != DrawObj::VSP_MAIN_SCREEN || !m_GEngine )
+    if ( m_LinkedScreen != DrawObj::VSP_MAIN_SCREEN || !m_GEngine || !vp )
     {
         return;
     }
@@ -3300,8 +3304,6 @@ void VspGlWindow::BlankDraw()
         return;
     }
     Vehicle * veh = VehicleMgr.GetVehicle();
-    std::vector< VSPGraphic::Viewport * > vps = m_GEngine->getDisplay()->getLayoutMgr()->getViewports();
-    bool depth = vps.size() == 1;
 
     float ppu = pixels_per_unit();
     float r = BLANK_RADIUS * ppu;
@@ -3321,15 +3323,8 @@ void VspGlWindow::BlankDraw()
     glShadeModel( GL_SMOOTH );
     glEnable( GL_LINE_SMOOTH );
     glDepthMask( GL_FALSE );
-    if ( depth )
-    {
-        glEnable( GL_DEPTH_TEST );
-        glDepthFunc( GL_LEQUAL );
-    }
-    else
-    {
-        glDisable( GL_DEPTH_TEST );
-    }
+    glEnable( GL_DEPTH_TEST );
+    glDepthFunc( GL_LEQUAL );
 
     glViewport( 0, 0, pixel_w(), pixel_h() );
     glMatrixMode( GL_PROJECTION );
@@ -3345,12 +3340,17 @@ void VspGlWindow::BlankDraw()
     glEnable( GL_SCISSOR_TEST );
 
     const int nseg = 32;
-    for ( VSPGraphic::Viewport * vp : vps )
     {
-        VSPGraphic::Camera * cam = vp ? vp->getCamera() : nullptr;
+        VSPGraphic::Camera * cam = vp->getCamera();
         if ( !cam || vp->width() <= 0 || vp->height() <= 0 )
         {
-            continue;
+            glMatrixMode( GL_PROJECTION );
+            glPopMatrix();
+            glMatrixMode( GL_MODELVIEW );
+            glPopMatrix();
+            glPopAttrib();
+            glUseProgram( program );
+            return;
         }
         glScissor( vp->x(), vp->y(), vp->width(), vp->height() );
 

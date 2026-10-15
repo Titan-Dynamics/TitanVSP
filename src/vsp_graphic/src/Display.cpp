@@ -132,6 +132,7 @@ void Display::draw( Scene * scene, int x, int y )
         _loadLogo();
     }
     _currLayout->setLogo( _showLogo ? _logoTex : 0, _logoW, _logoH );
+    _currLayout->setSceneOverlay( _sceneOverlay );
 
     _currLayout->draw( scene, x, y );
 }

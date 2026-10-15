@@ -4,6 +4,7 @@
 #include "Common.h"
 
 #include <vector>
+#include <functional>
 #include "glm/glm.hpp"
 
 namespace VSPGraphic
@@ -247,6 +248,14 @@ public:
         _showLogo = show;
     }
 
+    /*!
+    * Drawing to do in each viewport right after its scene, depth-tested against it (TitanVSP).
+    */
+    void setSceneOverlay( std::function< void( Viewport * ) > overlay )
+    {
+        _sceneOverlay = overlay;
+    }
+
 protected:
     std::vector<LayoutMgr *> _layoutList;
 
@@ -254,6 +263,7 @@ private:
     void _loadLogo();
 
     bool _showLogo;
+    std::function< void( Viewport * ) > _sceneOverlay;
     bool _logoTried;
     unsigned int _logoTex;
     int _logoW, _logoH;

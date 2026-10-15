@@ -107,7 +107,7 @@ to turn the view works as before, anywhere. It uses the same picking as the Geom
 **Blanks.** A Blank component has no surface; it used to show as a small axis triad. It's now a
 small shaded ball at its origin (and at each symmetric copy), half transparent and the same size on
 screen whatever the zoom or window, with a white ring round it when selected. Clicking the ball
-selects the Blank. In a single viewport the ball hides behind parts in front of it. The Geom
+selects the Blank. Parts in front of a Blank hide its ball, as they hide each other. The Geom
 Browser's **Pick** mode still picks Blanks by their (now invisible) triad.
 
 **Move arrows.** Selecting components shows Blender-style move arrows at their origin: red X, green

@@ -20,6 +20,7 @@ namespace VSPGraphic
 class GraphicEngine;
 class Renderable;
 class Selectable;
+class Viewport;
 }
 
 class ScreenMgr;
@@ -218,7 +219,7 @@ private:
     // A Blank has no surface, so it's drawn as a small shaded ball at its origin -- a fixed size on
     // screen -- with a ring round it when it's selected.  BlankHit finds the Blank whose ball is
     // under ( x, y ), for clicking.
-    void BlankDraw();
+    void BlankDraw( VSPGraphic::Viewport * vp );
     string BlankHit( int x, int y );
     bool m_ClickCandidate;
     int m_ClickX, m_ClickY;

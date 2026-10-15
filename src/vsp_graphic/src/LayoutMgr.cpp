@@ -215,6 +215,11 @@ void LayoutMgr::draw( Scene * scene, int x, int y )
         // Draw scene.
         scene->draw();
 
+        if ( _sceneOverlay )
+        {
+            _sceneOverlay( _viewportList[i] );
+        }
+
         // Draw arrows.
         _viewportList[i]->drawXYZArrows();
 

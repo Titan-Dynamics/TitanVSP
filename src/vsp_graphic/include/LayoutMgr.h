@@ -2,6 +2,7 @@
 #define _VSP_GRAPHIC_VIEWPORT_MANAGER_H
 
 #include <vector>
+#include <functional>
 #include "Common.h"
 
 namespace VSPGraphic
@@ -121,6 +122,15 @@ public:
     /*!
     * The logo texture to draw behind each viewport, or 0 for none (TitanVSP).
     */
+    /*!
+    * Called for each viewport right after its scene is drawn, with its camera bound and its depth
+    * buffer as the scene left it -- before the corner axes clear it (TitanVSP).
+    */
+    void setSceneOverlay( std::function< void( Viewport * ) > overlay )
+    {
+        _sceneOverlay = overlay;
+    }
+
     void setLogo( unsigned int texId, int width, int height )
     {
         _logoTex = texId;
@@ -133,6 +143,8 @@ protected:
 
     unsigned int _logoTex;
     int _logoW, _logoH;
+
+    std::function< void( Viewport * ) > _sceneOverlay;
 
 private:
     int _row;

@@ -252,9 +252,11 @@ rotates and nothing highlights on hover. `ManageGeomScreen::SetSelection` applie
 
 `VspGlWindow::BlankDraw` draws every shown `BLANK_GEOM_TYPE` component as a half-transparent shaded
 disc at each of its origins (`GetTransMatVec()` translations), a fixed size in screen points, with
-a white ring when selected. It projects through each viewport's camera into window pixels and, with
-one viewport, depth-tests against the scene (`glOrtho( 0, W, 0, H, 0, 1 )`, vertex z = -window
-depth); with several, the scene's depth only survives for the last viewport, so it doesn't test.
+a white ring when selected. It runs from a TitanVSP hook, `Display::setSceneOverlay` (passed on to
+`LayoutMgr`), which calls it for each viewport right after that viewport's scene is drawn. That
+timing matters: `Viewport::drawXYZArrows` clears the depth buffer next, so anything drawn later
+can't be hidden by the model. It projects each origin through the viewport's camera into window
+pixels and depth-tests against the scene (`glOrtho( 0, W, 0, H, 0, 1 )`, vertex z = -window depth).
 `BlankHit` finds a ball under the cursor for `ClickSelect`, which prefers it over the colour pick.
 `BlankGeom` keeps its axis triad (the Geom Browser's Pick mode picks a Blank by it) but at
 `m_LineAlpha` 0, which the normal pass's alpha test drops and the pick pass doesn't, and no longer
