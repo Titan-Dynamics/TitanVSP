@@ -25,8 +25,8 @@
 //     would cross.  The radius tapers to nothing approaching it, so the body ends in a point.
 //  5. The surface.  The sections are skinned C2 around the loop, spaced as they lie along it.
 //
-// Between a body and another -- a pod, canopy or boom running into a fuselage, a nacelle into a
-// wing -- the junction is a closed loop with no corner, so the fillet is a ring all the way round:
+// Between a body and another -- a pod, canopy or boom running into a fuselage, a fuselage set into
+// a wing -- the junction is a closed loop with no corner, so the fillet is a ring all the way round:
 //  1. The junction.  The other's signed distance is sampled over a grid on the smaller one's
 //     surface, and the loops where it changes sign are traced and polished onto the junction.
 //     A body passing right through another meets it in two loops, and gets two rings.
@@ -34,7 +34,7 @@
 //     in either, such as a seam where a fuselage's sections close on themselves at a slight
 //     angle.  On a wing, the contact is held to the wing's own parameters, as round a wing root.
 //     From one ball at the junction the march follows the balls' centres -- a smooth curve even
-//     where the junction turns sharply, as where a nacelle's tail sinks into the wing -- all the
+//     where the junction turns sharply, as where a fuselage's tail sinks into a wing -- all the
 //     way round and back to it, in steps that shrink wherever the balls turn quickly.
 //  3. The sections, as for a wing, at the full radius everywhere.
 //  4. The surface.  The sections are skinned C2 round the loop, and closed on themselves.
@@ -1877,7 +1877,7 @@ bool BuildRing( const VspSurf & asurf, const VspSurf & bsurf, bool bwing, const 
 
     //==== Follow the balls round, from the seed back to it ====//
     // The balls' centres trace a smooth closed curve -- the spine, where the two bodies pushed out
-    // by r meet -- even where the junction itself turns sharply, as round the tail of a nacelle
+    // by r meet -- even where the junction itself turns sharply, as round the tail of a fuselage
     // sinking into a wing.  So the march follows the spine: a step out along its tangent, then
     // Newton back onto it across the tangent.  Steps shrink wherever the spine or the contacts
     // turn quickly, so each lands on the same ball rolled on, and grow again where they do not.
@@ -2163,7 +2163,7 @@ void FilletGeom::SetFuse( const string & id )
 }
 
 // The body the parent runs into.  For a wing, the fuselage holding most of its root section; for
-// a body, the fuselage or wing it overlaps most -- a nacelle's wing, say.
+// a body, the fuselage or wing it overlaps most -- the wing a fuselage is set into, say.
 Geom* FilletGeom::FindFuse( Geom* parent )
 {
     const bool wing = parent->GetType().m_Type == MS_WING_GEOM_TYPE;
@@ -2375,7 +2375,7 @@ void FilletGeom::UpdateBodySurf( Geom* body, Geom* fuse )
         return;
     }
 
-    // First build: size the ball from the slimmer of the two at its thickest -- a nacelle's
+    // First build: size the ball from the slimmer of the two at its thickest -- a fuselage's
     // diameter, not the chord of the wing it sits on.
     if ( m_Radius() <= 0.0 )
     {

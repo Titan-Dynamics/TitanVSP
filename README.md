@@ -1,7 +1,7 @@
 # TitanVSP
 
 TitanVSP is [OpenVSP](https://github.com/OpenVSP/OpenVSP) **3.55.0** with a **Fillet**
-component that blends wings, fuselages and nacelles into each other with smooth rolling-ball
+component that blends wings and fuselages into each other with smooth rolling-ball
 fillets, plus Windows scripts that build and launch it in one step. Everything else is upstream
 OpenVSP, unchanged.
 
@@ -14,7 +14,7 @@ OpenVSP, unchanged.
 - [Keeping up with upstream](#keeping-up-with-upstream)
 - [License](#license)
 
-<img width="1751" height="1667" alt="Fillets on a wing root, nacelles, tail and canopy, shaded" src="docs/images/fillets-shaded.png" />
+<img width="1751" height="1667" alt="Fillets on a wing root, fuselages on the wing, tail and canopy, shaded" src="docs/images/fillets-shaded.png" />
 <img width="1751" height="1667" alt="The same model in wireframe, with the fillets shaded" src="docs/images/fillets-wireframe.png" />
 <img width="1751" height="1667" alt="The same model with the fillets highlighted" src="docs/images/fillets-highlighted.png" />
 <p>
@@ -116,20 +116,19 @@ Using the SuperProject is the easy route. TitanVSP has only been built and teste
 
 A **Fillet** blends one component into another with a smooth, concave rolling-ball fillet, the
 shape a ball of fixed radius sweeps as it rolls along the junction touching both parts. It covers
-three kinds of join:
+two kinds of join:
 
 | Add the Fillet to | It blends into | Shape |
 | --- | --- | --- |
 | a **Wing** | the Fuselage, Pod or Stack its root is buried in | Runs round the wing root from the lower trailing edge to the upper one, and tapers to a point at each end of the trailing edge |
-| a **Fuselage, Pod or Stack** | the Fuselage, Pod or Stack it overlaps most: canopies, pods, booms, stubs, fuselages merged side by side | A closed ring round each loop where they meet; a body passing right through another gets two rings |
-| a **Fuselage, Pod or Stack** used as a nacelle | the **Wing** it sits on | A closed ring round the nacelle, blending along the wing's top and bottom surfaces |
+| a **Fuselage, Pod or Stack** | the Fuselage, Pod, Stack or **Wing** it overlaps most: a canopy, a pod or boom, a fuselage set into a wing | A closed ring round each loop where they meet; a body passing right through another gets two rings |
 
 The Fillet finds the other part on its own. It is a separate, closed, watertight body overlapping
 both parts, and it leaves them untouched.
 
 #### In the GUI
 
-1. In the Geom Browser, select the wing, fuselage or nacelle the fillet should hang off.
+1. In the Geom Browser, select the wing or fuselage the fillet should hang off.
 2. Pick **FILLET** in the type list next to **Add**, then click **Add**.
 3. Open the new Fillet. Its **Design** tab shows a status line saying what it is blending into,
    and these parameters:
@@ -158,17 +157,18 @@ vsp.ReadVSPFile('model.vsp3')
 wing = vsp.FindGeomsWithName('WingGeom')[0]
 root_fillet = vsp.AddGeom('FILLET', wing)
 
-# A nacelle (a Fuselage) into the wing it sits on, with a chosen radius.
-nacelle = vsp.FindGeomsWithName('Nacelle')[0]
-nacelle_fillet = vsp.AddGeom('FILLET', nacelle)
-vsp.SetParmVal(nacelle_fillet, 'Radius', 'Design', 4.0)
-vsp.SetParmVal(nacelle_fillet, 'Sink', 'Design', 0.5)
+# A second fuselage into whatever it overlaps most -- another fuselage or a wing -- with a chosen
+# radius.
+pod = vsp.FindGeomsWithName('Fuselage2')[0]
+pod_fillet = vsp.AddGeom('FILLET', pod)
+vsp.SetParmVal(pod_fillet, 'Radius', 'Design', 4.0)
+vsp.SetParmVal(pod_fillet, 'Sink', 'Design', 0.5)
 
 vsp.Update()
 
 # Export just the fillets to STL.
 for g in vsp.FindGeoms():
-    vsp.SetSetFlag(g, vsp.SET_FIRST_USER, g in (root_fillet, nacelle_fillet))
+    vsp.SetSetFlag(g, vsp.SET_FIRST_USER, g in (root_fillet, pod_fillet))
 vsp.ExportFile('fillets.stl', vsp.SET_FIRST_USER, vsp.EXPORT_STL)
 ```
 
@@ -181,7 +181,6 @@ The parameters are `Radius`, `NumStations`, `TETaper` and `Sink`, all in the `De
   wing-to-wing joins aren't supported.
 - A body join must be a closed loop that doesn't cross a flat end cap or a sharp edge. For
   example, a boom exiting through a fuselage's flat tail cap won't fillet.
-- A nacelle that reaches past the wing's trailing edge hasn't been tested.
 - **Sink** is in absolute model units. On small models (the default 30-unit fuselage, say),
   1 unit is large, so turn it down.
 - If the ball can't fit all the way round a junction, the status line says so; try a smaller
