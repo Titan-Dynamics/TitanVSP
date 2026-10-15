@@ -22,13 +22,7 @@ Models, scripts and the `openvsp` Python API work as they do in OpenVSP 3.55.0.
 - [Keeping up with upstream](#keeping-up-with-upstream)
 - [License](#license)
 
-<img width="1751" height="1667" alt="Fillets on a wing root, fuselages on the wing, tail and canopy, shaded" src="docs/images/fillets-shaded.png" />
-<img width="1751" height="1667" alt="The same model in wireframe, with the fillets shaded" src="docs/images/fillets-wireframe.png" />
-<img width="1751" height="1667" alt="The same model with the fillets highlighted" src="docs/images/fillets-highlighted.png" />
-<p>
-  <img align="top" width="208" alt="Adding a FILLET in the Geom Browser" src="docs/images/geom-browser-add-fillet.png" />
-  <img align="top" width="302" alt="The Fillet's Design tab" src="docs/images/fillet-design-tab.png" />
-</p>
+<img width="2879" height="1675" alt="image" src="https://github.com/user-attachments/assets/a34d5bea-255a-4ebe-8cab-bd0b54ca14b0" />
 
 ## Highlights
 
