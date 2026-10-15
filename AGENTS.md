@@ -227,6 +227,22 @@ header comment gives the outline; this section covers what you need to change it
 - **Menu:** `MainVSPScreen` has the View → Perspective check item (key `5`). `SetPerspective()`
   applies it to every viewport, and it's reapplied in `Update()`.
 
+## Plots (Results Manager)
+
+- **Graph widget:** OpenVSP's graphs are `Vsp_Canvas` (`GuiDevice.h/.cpp`), built on the bundled
+  Cartesian library (`src/external/cartesian`). `GroupLayout::AddCanvas` makes the canvas and its
+  axes and sets the grid colours.
+- **Pan/zoom/hover:** opt-in through `Vsp_Canvas::EnablePanZoom( view, reset )`. Without it the
+  canvas forwards clicks and drags to its callback, which the curve editor relies on. While it's
+  on, the canvas pans on drag, zooms on the wheel about the cursor, resets on a double click, and
+  draws a crosshair and coordinate readout in `draw()`.
+- **Keeping the view:** `VSPAEROPlotScreen::EnablePanZoom` writes each new view into that plot's
+  `VSPAEROMgr` X/Y Min/Max parms and sets their `IsManual` flags. The screen's normal refresh
+  (`Update*AutoManualAxisLimits`) then keeps the view. Reset clears the flags.
+- **Zero axes:** `Ca_Canvas` has a TitanVSP hook, `virtual draw_underlay()`, called after the grid
+  and before the plotted objects. `Vsp_Canvas` uses it to draw x = 0 and y = 0 light. Keep this
+  hook when updating the Cartesian library.
+
 ## File chooser
 
 `ScreenMgr::FileChooser` is the single entry point for every open/save dialog. It reads the
