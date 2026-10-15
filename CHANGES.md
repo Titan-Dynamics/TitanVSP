@@ -26,8 +26,8 @@ length unit. Models keep whatever they were saved with.
 
 | Release | What's in it |
 | --- | --- |
-| Not yet released (`main`) | Perspective by default, saved with each model. |
-| [v3.55.0-titan.5](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.5) | Everything else on this page. |
+| [v3.55.0-titan.6](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.6) | Everything on this page. |
+| v3.55.0-titan.5 (withdrawn) | titan.6 without perspective by default, saved with each model. Replaced by titan.6. |
 | v3.55.0-titan.4 (withdrawn) | titan.5 without the move arrows, click-to-select, Blanks drawn as balls, and the brighter selection with thinner selection boxes. Replaced by titan.5. |
 | v3.55.0-titan.3 (withdrawn) | titan.4 without the VSPAERO Viewer changes, the logo, STL export resolution, STEP and IGES in millimetres, and the Fillet's TE Taper default of 0.75. Replaced by titan.4. |
 | v3.55.0-titan.2 (withdrawn) | titan.3 without the VSPAERO results plot changes. Replaced by titan.3. |
