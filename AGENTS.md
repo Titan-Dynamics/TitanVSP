@@ -30,7 +30,6 @@ there: smaller diffs keep upstream updates easy (see [Upstream updates](#upstrea
 | `src/geom_api/` | Public API (`APIDefines.h` enums, `VSP_Geom_API`); SWIG makes the Python bindings from it. |
 | `src/vsp/main.h.in` | Version strings (the TitanVSP name). |
 | `dev/` | Windows build, run and shortcut scripts (TitanVSP's). |
-| `docs/images/` | Fillet screenshots, from earlier versions of the README (it now shows an image hosted on GitHub). |
 | `Libraries/` | Third-party library superbuild (upstream). |
 
 ## Build, run and test
