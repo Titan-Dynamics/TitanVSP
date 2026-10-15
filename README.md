@@ -22,7 +22,7 @@ Models, scripts and the `openvsp` Python API work as they do in OpenVSP 3.55.0.
 - [Keeping up with upstream](#keeping-up-with-upstream)
 - [License](#license)
 
-<img width="2879" height="1675" alt="image" src="https://github.com/user-attachments/assets/a34d5bea-255a-4ebe-8cab-bd0b54ca14b0" />
+<img width="2879" height="4277" alt="graphic" src="https://github.com/user-attachments/assets/9bd0d0ae-3e84-4ff8-8be1-0973074ecb38" />
 
 ## Highlights
 
