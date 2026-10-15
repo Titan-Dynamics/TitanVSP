@@ -295,8 +295,10 @@ for the main window only (`m_LinkedScreen == VSP_MAIN_SCREEN`; `EditXSecWindow` 
   recomputes this.
 - **Ortho for screen work:** the screen grid and `screenToWorld` (rulers, probes, picking a
   location) in `Viewport.cpp` deliberately use the orthographic matrices in both modes.
-- **Menu:** `MainVSPScreen` has the View → Perspective check item (key `5`). `SetPerspective()`
-  applies it to every viewport, and it's reapplied in `Update()`.
+- **Menu:** `MainVSPScreen` has the View → Perspective check item (key `5`). The mode lives in the
+  model, `Vehicle::m_ViewPerspective` (default on, saved in the `.vsp3`); the menu toggles it, and
+  `MainVSPScreen::Update()` applies it to every viewport with `SetPerspective()` each update, since
+  a layout change makes new, orthographic viewports.
 
 ## Plots (Results Manager)
 

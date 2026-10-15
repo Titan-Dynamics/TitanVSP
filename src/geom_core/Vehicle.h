@@ -625,6 +625,10 @@ public:
 
     // TitanVSP: an STL export can use its own tessellation.  When m_STLResOverride is on, every
     // Geom being exported takes these for the export, then gets its own back.
+    // TitanVSP: whether the main 3D view is in perspective.  Saved with the model, so each file
+    // reopens the way it was left; new models (and files from before) start in perspective.
+    BoolParm m_ViewPerspective;
+
     BoolParm m_STLResOverride;
     IntParm m_STLTessU;         // Tess_U, for Geoms without sections (pods, fillets, ...).
     IntParm m_STLSectTessU;     // SectTess_U of every section of wings, fuselages and stacks.

@@ -307,10 +307,12 @@ bool MainVSPScreen::Update()
 
     m_AxisMenuItem.Update( m_ShowXYZArrow );
     m_BorderMenuItem.Update( m_ShowBorder );
-    m_PerspectiveMenuItem.Update( m_Perspective );
-
-    // Changing the window layout makes new viewports, which start orthographic.
-    SetPerspective( m_Perspective );
+    // The model says whether the view is in perspective, so each file reopens as it was left.
+    // Reapplied every update: changing the window layout makes new viewports, which start
+    // orthographic.
+    bool persp = VehicleMgr.GetVehicle()->m_ViewPerspective();
+    m_PerspectiveMenuItem.Update( persp );
+    SetPerspective( persp );
 
     m_FLTK_Window->redraw();
     return true;
@@ -602,7 +604,10 @@ void MainVSPScreen::ActionCB( void * data )
     }
     else if ( data == &m_PerspectiveMenuItem )
     {
-        SetPerspective( !m_Perspective );
+        Vehicle* veh = VehicleMgr.GetVehicle();
+        veh->m_ViewPerspective.Set( !veh->m_ViewPerspective() );
+        SetPerspective( veh->m_ViewPerspective() );
+        m_ScreenMgr->SetUpdateFlag( true );
     }
     else if ( data == &m_TopMenuItem )
     {

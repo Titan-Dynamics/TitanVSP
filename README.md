@@ -229,7 +229,8 @@ the view to move along it.
 ### Perspective view
 
 **View → Perspective** (key **5**) switches the 3D view between orthographic and perspective,
-keeping the same framing.
+keeping the same framing. The view starts in perspective, and each model remembers which mode it
+was saved in.
 
 ### Windows file dialogs
 
