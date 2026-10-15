@@ -1211,23 +1211,23 @@ void ParmButton::Update( const string& parm_id )
 
         if ( ( a_parm && b_parm ) || ( adv_in && b_parm ) || ( adv_out && a_parm ) )
         {
-            m_Button->color( fl_rgb_color( 180, 160, 140 ) );
+            m_Button->color( fl_rgb_color( 112, 96, 74 ) );
         }
         else if ( a_parm )
         {
-            m_Button->color( fl_rgb_color( 140, 180, 140 ) );
+            m_Button->color( fl_rgb_color( 70, 108, 70 ) );
         }
         else if ( b_parm )
         {
-            m_Button->color( fl_rgb_color( 180, 140, 140 ) );
+            m_Button->color( fl_rgb_color( 112, 70, 70 ) );
         }
     }
     else if ( adv_in && adv_out )
-        m_Button->color( fl_rgb_color( 180, 160, 140 ) );
+        m_Button->color( fl_rgb_color( 112, 96, 74 ) );
     else if ( adv_in )
-        m_Button->color( fl_rgb_color( 140, 180, 140 ) );
+        m_Button->color( fl_rgb_color( 70, 108, 70 ) );
     else if ( adv_out )
-        m_Button->color( fl_rgb_color( 180, 140, 140 ) );
+        m_Button->color( fl_rgb_color( 112, 70, 70 ) );
     else
         m_Button->color( FL_BACKGROUND_COLOR );
 

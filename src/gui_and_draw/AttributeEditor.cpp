@@ -129,7 +129,7 @@ void AttributeTree::RebuildTree()
     string header_row = "AttrTree\tData\tType";
     root = m_AttrTree->AddRow( header_row.c_str() );
 
-    root->labelbgcolor( FL_WHITE );
+    root->labelbgcolor( FL_BACKGROUND2_COLOR );
     root->labelcolor( FL_BLACK );
     root->labelfont( FL_HELVETICA_BOLD );
 

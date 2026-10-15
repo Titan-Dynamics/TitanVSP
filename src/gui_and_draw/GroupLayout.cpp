@@ -847,11 +847,11 @@ Fl_Box* GroupLayout::AddDividerBox( const string& text, int used_w, Fl_Color col
 
     if ( ( 0.299 * r + 0.587 * g + 0.114 * b ) > 140.0 )
     {
-        flbox->labelcolor( FL_FOREGROUND_COLOR );
+        flbox->labelcolor( fl_rgb_color( 20, 20, 20 ) );
     }
     else
     {
-        flbox->labelcolor( FL_BACKGROUND2_COLOR );
+        flbox->labelcolor( fl_rgb_color( 255, 255, 255 ) );
     }
     flbox->align( FL_ALIGN_NOWRAP );
     flbox->copy_label( text.c_str() );
@@ -2121,17 +2121,17 @@ Fl_Terminal* GroupLayout::AddFlTerminal( int height )
 
     terminal->textfont( FL_COURIER ); // Default FL_COURIER Must be monospaced
     terminal->textsize( 14 ); // Default 14
-    terminal->color( FL_WHITE );
-    terminal->textbgcolor( FL_WHITE );
-    terminal->textbgcolor_default( FL_WHITE );
-    terminal->textfgcolor( FL_BLACK );
-    terminal->textfgcolor_default( FL_BLACK );
+    terminal->color( FL_BACKGROUND2_COLOR );
+    terminal->textbgcolor( FL_BACKGROUND2_COLOR );
+    terminal->textbgcolor_default( FL_BACKGROUND2_COLOR );
+    terminal->textfgcolor( FL_FOREGROUND_COLOR );
+    terminal->textfgcolor_default( FL_FOREGROUND_COLOR );
 
-    terminal->cursorbgcolor( FL_WHITE );
-    terminal->cursorfgcolor( FL_BLACK );
+    terminal->cursorbgcolor( FL_FOREGROUND_COLOR );
+    terminal->cursorfgcolor( FL_BACKGROUND2_COLOR );
 
-    terminal->selectionfgcolor( FL_WHITE );
-    terminal->selectionbgcolor( FL_BLACK );
+    terminal->selectionfgcolor( FL_FOREGROUND_COLOR );
+    terminal->selectionbgcolor( FL_SELECTION_COLOR );
 
     terminal->scrollbar->linesize( 2 ); // Default 16.
 

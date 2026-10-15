@@ -53,7 +53,7 @@ Background::Background() : Renderable()
 
     _mode = Common::VSP_BACKGROUND_COLOR;
 
-    setMeshColor( 0.95f, 0.95f, 0.95f, 1.0f );
+    setMeshColor( 38.0f / 255.0f, 41.0f / 255.0f, 46.0f / 255.0f, 1.0f );
     setPrimType( Common::VSP_QUADS );
 }
 Background::~Background()
@@ -172,7 +172,7 @@ void Background::reset()
     _offsetY = 0;
 
     removeImage();
-    setMeshColor( 242.0/255.0, 242.0/255.0, 242/255.0, 1.0f );
+    setMeshColor( 38.0f / 255.0f, 41.0f / 255.0f, 46.0f / 255.0f, 1.0f );
 
     _hasChanged = true;
 }

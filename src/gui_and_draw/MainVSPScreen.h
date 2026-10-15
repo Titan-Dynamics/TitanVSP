@@ -65,6 +65,7 @@ public:
 
     void ScreenGrab( const string & fname, int w, int h, bool transparentBG, bool autocrop );
     void SetViewAxis( bool vaxis );
+    void SetPerspective( bool persp );
     void SetShowBorders( bool brdr );
     void SetBackground( double r, double g, double b );
 
@@ -117,6 +118,7 @@ protected:
     ScreenMenuItem m_ScreenshotMenuItem;
     VSPCheckMenuItem m_AxisMenuItem;
     VSPCheckMenuItem m_BorderMenuItem;
+    VSPCheckMenuItem m_PerspectiveMenuItem;
 
     ActionMenuItem m_TopMenuItem;
     ActionMenuItem m_FrontMenuItem;
@@ -185,6 +187,7 @@ protected:
 
     bool m_ShowXYZArrow;
     bool m_ShowBorder;
+    bool m_Perspective;
 };
 
 

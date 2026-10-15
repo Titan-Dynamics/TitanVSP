@@ -2,8 +2,12 @@
 
 #include "glm/ext.hpp"
 
-#define PERSPECTIVE_NEAR 0.1f
-#define PERSPECTIVE_FAR 5000.0f
+#include <algorithm>
+#include <cmath>
+
+// Vertical field of view of the perspective camera, in degrees.  Narrow enough to look natural on
+// an aircraft, wide enough to show depth.
+#define PERSPECTIVE_FOV 30.0f
 
 namespace VSPGraphic
 {
@@ -28,9 +32,39 @@ Camera::~Camera()
 {
 }
 
+// In perspective the eye stands back from the centre of rotation, along the view direction, far
+// enough that the plane through the centre of rotation fills the view just as the orthographic
+// view does.  Rotating, panning and zooming are shared, so switching keeps the framing.
 glm::mat4 Camera::getModelViewMatrix()
 {
+    if ( _projectionType == Common::VSP_CAM_PERSPECTIVE )
+    {
+        return glm::translate( glm::mat4( 1.0f ), glm::vec3( 0.0f, 0.0f, -_eyeDistance() ) ) * _modelviewMatrix;
+    }
     return _modelviewMatrix;
+}
+
+glm::mat4 Camera::getOrbitMatrix()
+{
+    return _modelviewMatrix;
+}
+
+glm::mat4 Camera::getOrthoProjectionMatrix()
+{
+    float w = _vWidth / 2.0f;
+    float h = _vHeight / 2.0f;
+    return glm::ortho( -w * _oZoom, w * _oZoom, -h * _oZoom, h * _oZoom, _znear, _zfar );
+}
+
+float Camera::_eyeDistance()
+{
+    float h = _vHeight / 2.0f * _oZoom;
+    return h / glm::tan( glm::radians( PERSPECTIVE_FOV / 2.0f ) );
+}
+
+Common::VSPenum Camera::getProjection()
+{
+    return _projectionType;
 }
 
 glm::mat4 Camera::getProjectionMatrix()
@@ -52,6 +86,7 @@ void Camera::setZNearFar( float zn, float zf )
 {
     _znear = zn;
     _zfar = zf;
+    _calculateProjection();
 }
 
 void Camera::setProjection( Common::VSPenum type )
@@ -129,7 +164,6 @@ void Camera::changeView( Common::VSPenum type )
 
 void Camera::_calculateProjection()
 {
-    float range = 0;
     float w = _vWidth / 2.0;
     float h = _vHeight / 2.0;
 
@@ -144,15 +178,21 @@ void Camera::_calculateProjection()
         break;
 
     case Common::VSP_CAM_PERSPECTIVE:
-        _projectionMatrix = glm::perspective( _pZoom, ( float )_vWidth / ( float )_vHeight, PERSPECTIVE_NEAR, PERSPECTIVE_FAR );
+    {
+        // The model reaches _zfar either side of the centre of rotation, which is the eye's
+        // distance away.  The near plane stays well clear of the eye, so depth stays precise.
+        float d = _eyeDistance();
+        float zfar = d + std::abs( _zfar );
+        float znear = std::max( d - std::abs( _zfar ), 0.001f * zfar );
+        _projectionMatrix = glm::perspective( glm::radians( PERSPECTIVE_FOV ), ( float )_vWidth / ( float )_vHeight, znear, zfar );
 
-        // Update bounds.
-        range = glm::tan( glm::radians( _pZoom / 2.f ) ) * PERSPECTIVE_NEAR;
-        _leftB = -range * ( ( float )_vWidth / ( float )_vHeight );
-        _rightB = range * ( ( float )_vWidth / ( float )_vHeight );
-        _downB = -range;
-        _upB = range;
+        // Bounds of the view at the centre of rotation.
+        _leftB = -w * _oZoom;
+        _rightB = w * _oZoom;
+        _upB = -h * _oZoom;
+        _downB = h * _oZoom;
         break;
+    }
 
     default:
         assert( false ); // Unknown Projection Type

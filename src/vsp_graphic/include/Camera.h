@@ -36,6 +36,16 @@ public:
     */
     virtual glm::mat4 getModelViewMatrix();
     /*!
+    * The orthographic projection framing the same view, whichever projection is in use.  At the
+    * plane through the centre of rotation, a perspective view frames exactly this.
+    */
+    virtual glm::mat4 getOrthoProjectionMatrix();
+    /*!
+    * ModelViewMatrix about the centre of rotation, without the perspective eye's distance.  With
+    * getOrthoProjectionMatrix, maps the screen to the plane through the centre of rotation.
+    */
+    virtual glm::mat4 getOrbitMatrix();
+    /*!
     * Resize viewport.
     */
     virtual void resize( int x, int y, int width, int height );
@@ -48,6 +58,11 @@ public:
     * Default: VSP_CAM_ORTHO
     */
     virtual void setProjection( Common::VSPenum type );
+
+    /*!
+    * Current projection type, VSP_CAM_ORTHO or VSP_CAM_PERSPECTIVE.
+    */
+    virtual Common::VSPenum getProjection();
 
     /*!
      * Get Relative Zoom Value
@@ -197,6 +212,9 @@ protected:
 
     // Type of Projection.
     Common::VSPenum _projectionType;
+
+    // How far a perspective eye stands back from the centre of rotation.
+    float _eyeDistance();
 };
 }
 #endif

@@ -52,7 +52,7 @@ CompGeomScreen::CompGeomScreen( ScreenMgr* mgr ) : BasicScreen( mgr, 375, 470, "
 
     m_TextDisplay = m_BorderLayout.AddFlTextDisplay( 225 );
     m_TextDisplay->color( 23 );
-    m_TextDisplay->textcolor( 32 );
+    m_TextDisplay->textcolor( FL_FOREGROUND_COLOR );
     m_TextDisplay->textfont( 4 );
     m_TextDisplay->textsize( 12 );
     m_TextBuffer = new Fl_Text_Buffer;

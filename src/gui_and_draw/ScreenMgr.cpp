@@ -79,12 +79,75 @@
 #include "MainThreadIDMgr.h"
 
 #include <FL/platform.H>
+#include <FL/Fl_Tooltip.H>
+
+#ifdef _WIN32
+#include <dwmapi.h>
+#include <set>
+#pragma comment( lib, "dwmapi.lib" )
+#endif
 
 #define UPDATE_TIME (1.0/30.0)
+
+//==== Dark Theme ====//
+// TitanVSP's UI is dark.  FLTK draws from a palette, so the theme is set once, before any screen
+// is built, by recolouring that palette: the background and its gray ramp, the background of
+// inputs and lists, and the text.  The screens also name a few fixed palette entries for text --
+// black, dark blue, blue, dark magenta -- and one for read-only fields; those become their light
+// counterparts.  A widget that sets an RGB colour of its own is not affected.
+static void ApplyDarkTheme()
+{
+    Fl::scheme( "GTK+" );
+
+    Fl::background( 48, 50, 54 );       // Windows, buttons, and the gray ramp they shade from.
+    Fl::background2( 33, 35, 38 );      // Inputs, sliders, lists and trees.
+    Fl::foreground( 222, 224, 228 );    // Text.
+
+    Fl::set_color( FL_SELECTION_COLOR, 74, 128, 204 );
+    Fl::set_color( FL_INACTIVE_COLOR, 128, 130, 136 );
+
+    // Fixed entries screens use for text.
+    Fl::set_color( FL_BLACK, 222, 224, 228 );
+    Fl::set_color( FL_DARK_BLUE, 140, 182, 255 );
+    Fl::set_color( FL_BLUE, 120, 170, 255 );
+    Fl::set_color( ( Fl_Color )4, 120, 170, 255 );
+    Fl::set_color( FL_DARK_MAGENTA, 222, 150, 230 );
+
+    // Read-only output fields, and the divider bars heading each section.
+    Fl::set_color( ( Fl_Color )23, 40, 42, 46 );
+    Fl::set_color( ( Fl_Color )12, 52, 84, 140 );
+
+    Fl_Tooltip::color( fl_rgb_color( 30, 32, 35 ) );
+    Fl_Tooltip::textcolor( fl_rgb_color( 222, 224, 228 ) );
+}
+
+// Windows draws each window's title bar itself, light unless asked otherwise.  Ask every window,
+// once, for a dark one to match.  Windows older than 10 ignore the request.
+static void DarkTitleBars()
+{
+#ifdef _WIN32
+    static std::set< HWND > done;
+    for ( Fl_Window* win = Fl::first_window(); win; win = Fl::next_window( win ) )
+    {
+        HWND hwnd = fl_win32_xid( win );
+        if ( !hwnd || done.count( hwnd ) )
+        {
+            continue;
+        }
+        done.insert( hwnd );
+        BOOL dark = TRUE;
+        const DWORD DWMWA_USE_IMMERSIVE_DARK_MODE_ATTR = 20;
+        DwmSetWindowAttribute( hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_ATTR, &dark, sizeof( dark ) );
+        SetWindowPos( hwnd, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED );
+    }
+#endif
+}
 
 //==== Constructor ====//
 ScreenMgr::ScreenMgr( Vehicle* vPtr )
 {
+    ApplyDarkTheme();
+
     if ( vPtr )
     {
         m_VehiclePtr = vPtr;
@@ -92,8 +155,6 @@ ScreenMgr::ScreenMgr( Vehicle* vPtr )
     }
     m_UpdateFlag = true;
     MessageBase::Register( string( "ScreenMgr" ) );
-
-    Fl::scheme( "GTK+" );
     Fl::add_timeout( UPDATE_TIME, StaticTimerCB, this );
     Fl::add_handler( GlobalHandler );
 
@@ -144,6 +205,8 @@ void ScreenMgr::ForceUpdate()
 //==== Timer Callback ====//
 void ScreenMgr::TimerCB()
 {
+    DarkTitleBars();
+
     if ( m_UpdateFlag )
     {
         if (m_ShowPlotScreenOnce)

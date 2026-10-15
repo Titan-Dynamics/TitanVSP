@@ -80,7 +80,7 @@ ManageBackgroundScreen::ManageBackgroundScreen( ScreenMgr* mgr ) : BasicScreen( 
     m_BorderLayout.AddButton(m_ResetDefaults, "Reset Defaults");
 
     //Initialize Variables
-    colorChooser->rgb(242.0/255.0, 242.0/255.0, 242.0/255.0);
+    colorChooser->rgb( 38.0 / 255.0, 41.0 / 255.0, 46.0 / 255.0 );
     m_Color.GetFlButton()->value( 1 );
     m_Image.GetFlButton()->value( 0 );
     m_PreserveAspect.GetFlButton()->value( 1 );

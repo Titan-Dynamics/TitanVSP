@@ -214,7 +214,7 @@ void Viewport::drawColorScale()
     glEnd();
 
     // Outline, so the ends of the ramp are visible against any background.
-    glColor3f( 0.0f, 0.0f, 0.0f );
+    glColor3f( 0.87f, 0.88f, 0.89f );
     glLineWidth( 1.0f );
     glBegin( GL_LINE_LOOP );
     glVertex2f( x0, y0 );
@@ -226,7 +226,7 @@ void Viewport::drawColorScale()
     // Labels.  drawText draws at the origin of the current modelview, so each one is placed
     // by translating to where it belongs.
     glActiveTexture( GL_TEXTURE0 );
-    glColor3ub( 0, 0, 0 );
+    glColor3ub( 222, 224, 228 );
 
     float tx = x1 + 0.012f;
 
@@ -315,7 +315,7 @@ void Viewport::drawXYZArrows()
 
     glPointSize( 6.0 );
     glBegin( GL_POINTS );
-    glColor3ub( 0, 0, 0 );
+    glColor3ub( 222, 224, 228 );
     glVertex3d( 0.0, 0.0, 0.0 );
     glEnd();
 
@@ -328,7 +328,7 @@ void Viewport::drawXYZArrows()
     glm::mat4 yt = glm::translate( glm::mat4( static_cast<float>(1) ), glm::vec3( modelviewMatrix * glm::vec4( 0.f, ARROW_LENGTH + ARROW_TEXT_OFFSET, 0.f, 1.f ) ) );
     glm::mat4 zt = glm::translate( glm::mat4( static_cast<float>(1) ), glm::vec3( modelviewMatrix * glm::vec4( 0.f, 0.f, ARROW_LENGTH + ARROW_TEXT_OFFSET, 1.f ) ) );
 
-    glColor3ub( 0, 0, 0 );
+    glColor3ub( 222, 224, 228 );
 
     // Active Texture Image Unit 0.
     glActiveTexture( GL_TEXTURE0 );
@@ -365,10 +365,11 @@ void Viewport::drawGridOverlay()
         return;
     }
 
-    // Apply Projection and Modelview matrix.
+    // Apply Projection and Modelview matrix.  The grid lies flat on the screen, so it is laid out
+    // in the orthographic framing even when the view is in perspective.
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
-    glMultMatrixf( &_camera->getProjectionMatrix()[0][0] );
+    glMultMatrixf( &_camera->getOrthoProjectionMatrix()[0][0] );
 
     glMatrixMode( GL_MODELVIEW );
     glLoadIdentity();
@@ -540,9 +541,12 @@ void Viewport::showWatermark( bool showFlag )
 
 glm::vec3 Viewport::screenToWorld( const glm::vec2 &screenCoord)
 {
-    return glm::unProject(glm::vec3(screenCoord, 0.5), 
-        _camera->getModelViewMatrix(),
-        _camera->getProjectionMatrix(),
+    // The point under the cursor on the plane through the centre of rotation.  A perspective view
+    // frames that plane just as the orthographic view does, so the orthographic mapping finds it
+    // for both.
+    return glm::unProject(glm::vec3(screenCoord, 0.5),
+        _camera->getOrbitMatrix(),
+        _camera->getOrthoProjectionMatrix(),
         glm::vec4(_x, _y, _vWidth, _vHeight));
 }
 

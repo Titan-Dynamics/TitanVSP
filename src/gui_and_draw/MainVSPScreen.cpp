@@ -51,6 +51,7 @@ MainVSPScreen::MainVSPScreen( ScreenMgr* mgr ) : ActionScreen( mgr )
     m_GlWin = nullptr;
 
     m_ShowXYZArrow = true;
+    m_Perspective = false;
     m_ShowBorder = true;
 
     int x, y, w, h;
@@ -135,6 +136,7 @@ MainVSPScreen::MainVSPScreen( ScreenMgr* mgr ) : ActionScreen( mgr )
     m_RearMenuItem.Init( this, m_MenuBar, "View/Rear", FL_F + 10 );
     m_RightSideMenuItem.Init( this, m_MenuBar, "View/Right", FL_F + 11 );
     m_RightIsoMenuItem.Init( this, m_MenuBar, "View/Right Iso", FL_F + 12 );
+    m_PerspectiveMenuItem.Init( this, m_MenuBar, "View/Perspective", '5' );
     m_SetCORMenuItem.Init( this, m_MenuBar, "View/Set Rotation Center", 'r' );
     m_SetVNMenuItem.Init( this, m_MenuBar, "View/View Normal To", 'n' );
     m_AlignGeomMenuItem.Init( this, m_MenuBar, "View/View Front Of", 'x' );
@@ -304,6 +306,10 @@ bool MainVSPScreen::Update()
 
     m_AxisMenuItem.Update( m_ShowXYZArrow );
     m_BorderMenuItem.Update( m_ShowBorder );
+    m_PerspectiveMenuItem.Update( m_Perspective );
+
+    // Changing the window layout makes new viewports, which start orthographic.
+    SetPerspective( m_Perspective );
 
     m_FLTK_Window->redraw();
     return true;
@@ -593,6 +599,10 @@ void MainVSPScreen::ActionCB( void * data )
     {
         SetShowBorders( !m_ShowBorder );
     }
+    else if ( data == &m_PerspectiveMenuItem )
+    {
+        SetPerspective( !m_Perspective );
+    }
     else if ( data == &m_TopMenuItem )
     {
         SetView( VSPGraphic::Common::VSP_CAM_TOP );
@@ -759,6 +769,35 @@ void MainVSPScreen::SetViewAxis( bool vaxis )
             {
                 vports[i]->showXYZArrows( m_ShowXYZArrow );
             }
+        }
+    }
+}
+
+// Perspective or orthographic projection in every viewport.  The two share rotation, pan and zoom,
+// so switching keeps what is in view.
+void MainVSPScreen::SetPerspective( bool persp )
+{
+    if ( m_GlWin )
+    {
+        m_Perspective = persp;
+
+        bool changed = false;
+        vector< VSPGraphic::Viewport * > vports = m_GlWin->getGraphicEngine()->getDisplay()->getLayoutMgr()->getViewports();
+        for ( int i = 0; i < vports.size(); i++ )
+        {
+            if ( vports[i] && vports[i]->getCamera() )
+            {
+                VSPGraphic::Common::VSPenum type = m_Perspective ? VSPGraphic::Common::VSP_CAM_PERSPECTIVE : VSPGraphic::Common::VSP_CAM_ORTHO;
+                if ( vports[i]->getCamera()->getProjection() != type )
+                {
+                    vports[i]->getCamera()->setProjection( type );
+                    changed = true;
+                }
+            }
+        }
+        if ( changed )
+        {
+            m_GlWin->redraw();
         }
     }
 }
