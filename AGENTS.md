@@ -226,7 +226,11 @@ header comment gives the outline; this section covers what you need to change it
   (a `static const unsigned char TITAN_LOGO_PNG[]` of the file's bytes and its size).
 - **Line colours:** the default component colour is `Color::Color()` in
   `geom_core/Color.cpp` (170, 170, 170). Selection highlights are in `Geom.cpp` (bounding box,
-  active XSec, active sub-surface), `PickableGeom.cpp` and `Viewport::drawBorder`. The XSec View's
+  active XSec, active sub-surface), `PickableGeom.cpp` and `Viewport::drawBorder`. A selected
+  component is brightened in `Geom::LoadMainDrawObjs` (lines a third of the way to white, a little
+  emission on its material), for drawing only. The selection boxes (`m_HighlightDrawObj`, and
+  WingGeom's `m_SectBBoxDrawObj`) are 2 px at 50% alpha, through `DrawObj::m_LineAlpha`, a
+  TitanVSP field (default 1) that `VspGlWindow` passes to the renderer for `VSP_LINES`. The XSec View's
   curve colour is `Vehicle::m_XSecLineColor`, set in the constructor *and* `Wype()`; the
   constructor matters because opening a file at launch never calls `Wype()`.
 
