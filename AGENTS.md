@@ -30,7 +30,7 @@ there: smaller diffs keep upstream updates easy (see [Upstream updates](#upstrea
 | `src/geom_api/` | Public API (`APIDefines.h` enums, `VSP_Geom_API`); SWIG makes the Python bindings from it. |
 | `src/vsp/main.h.in` | Version strings (the TitanVSP name). |
 | `dev/` | Windows build, run and shortcut scripts (TitanVSP's). |
-| `docs/images/` | README screenshots. |
+| `docs/images/` | Fillet screenshots, from earlier versions of the README (it now shows an image hosted on GitHub). |
 | `Libraries/` | Third-party library superbuild (upstream). |
 
 ## Build, run and test
@@ -229,7 +229,7 @@ header comment gives the outline; this section covers what you need to change it
   active XSec, active sub-surface), `PickableGeom.cpp` and `Viewport::drawBorder`. A selected
   component is brightened in `Geom::LoadMainDrawObjs` (lines a third of the way to white, a little
   emission on its material), for drawing only. The selection boxes (`m_HighlightDrawObj`, and
-  WingGeom's `m_SectBBoxDrawObj`) are 2 px at 50% alpha, through `DrawObj::m_LineAlpha`, a
+  WingGeom's `m_SectBBoxDrawObj`) are 3 px at 50% alpha, through `DrawObj::m_LineAlpha`, a
   TitanVSP field (default 1) that `VspGlWindow` passes to the renderer for `VSP_LINES`. The XSec View's
   curve colour is `Vehicle::m_XSecLineColor`, set in the constructor *and* `Wype()`; the
   constructor matters because opening a file at launch never calls `Wype()`.

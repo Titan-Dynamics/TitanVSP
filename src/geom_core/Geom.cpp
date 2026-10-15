@@ -4538,7 +4538,7 @@ void Geom::LoadDrawObjs( vector< DrawObj* > & draw_obj_vec )
     m_HighlightDrawObj.m_Screen = DrawObj::VSP_MAIN_SCREEN;
     m_HighlightDrawObj.m_GeomID = BBOXHEADER + m_ID;
     m_HighlightDrawObj.m_Visible = isactive;
-    m_HighlightDrawObj.m_LineWidth = 2.0;
+    m_HighlightDrawObj.m_LineWidth = 3.0;
     m_HighlightDrawObj.m_LineColor = vec3d( 1.0, 1.0, 1.0 );
     m_HighlightDrawObj.m_LineAlpha = 0.5;
     m_HighlightDrawObj.m_Type = DrawObj::VSP_LINES;

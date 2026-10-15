@@ -86,9 +86,9 @@ The whole interface is dark.
   sub-surface lines that were black are #aaa too. The selected component's outline, its active
   cross-section, the active sub-surface, the picking hover highlight and the selected viewport's
   border are white instead of red. A wing's active-section box stays green. The selection boxes
-  are thin (2 px) and half transparent, and a selected component is drawn a little brighter: its
-  lines a third of the way to white, its shading lifted slightly. Models keep the colours saved in
-  them, so only new components pick up #aaa.
+  are thinner (3 px, was 4) and half transparent, and a selected component is drawn a little
+  brighter: its lines a third of the way to white, its shading lifted slightly. Models keep the
+  colours saved in them, so only new components pick up #aaa.
 - **XSec View:** the airfoil window opened by **Show** draws its curve in white, and its
   **Reset Defaults** button (and the Curve Editor's) goes back to white.
 - **Graphs:** the grid of OpenVSP's graphs (the Results Manager, Wave Drag and others) is shaded
