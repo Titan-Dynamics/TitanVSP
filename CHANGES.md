@@ -26,7 +26,8 @@ length unit. Models keep whatever they were saved with.
 
 | Release | What's in it |
 | --- | --- |
-| [v3.55.0-titan.6](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.6) | Everything on this page. |
+| [v3.55.0-titan.7](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.7) | Everything on this page. The zip includes this file, `CHANGES.md`. |
+| v3.55.0-titan.6 (withdrawn) | titan.7 without `CHANGES.md` in the zip. Replaced by titan.7. |
 | v3.55.0-titan.5 (withdrawn) | titan.6 without perspective by default, saved with each model. Replaced by titan.6. |
 | v3.55.0-titan.4 (withdrawn) | titan.5 without the move arrows, click-to-select, Blanks drawn as balls, and the brighter selection with thinner selection boxes. Replaced by titan.5. |
 | v3.55.0-titan.3 (withdrawn) | titan.4 without the VSPAERO Viewer changes, the logo, STL export resolution, STEP and IGES in millimetres, and the Fillet's TE Taper default of 0.75. Replaced by titan.4. |
@@ -211,6 +212,8 @@ it scales smoothly at any window size. Other 3D windows, such as the XSec View, 
   it next to the repo. `-Clean` and `-CleanAll` rebuild from scratch.
 - `dev\run.ps1` does an incremental build and launches `vsp.exe`. `-NoBuild` just launches it.
 - `dev\install-shortcut.ps1` adds a one-click "TitanVSP (Dev)" shortcut that runs `run.ps1`.
+- The install folder and release zip include `CHANGES.md` alongside `README.md`, so the list of
+  TitanVSP's changes ships with the program.
 - The Windows build enables the Python API and sets up a venv with the `openvsp` package installed
   in editable mode, so it picks up rebuilt bindings automatically.
 - The packaged Python `environment.yml` pins the Python version the bindings were built for.
