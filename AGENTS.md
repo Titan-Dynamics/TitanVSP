@@ -6,8 +6,10 @@ fork adds, see [CHANGES.md](CHANGES.md). For building and using it, see [README.
 ## What this repository is
 
 TitanVSP is OpenVSP 3.55.0 (NASA's parametric aircraft geometry tool, C++ with FLTK and OpenGL)
-plus a small set of changes. The first commit imports upstream OpenVSP 3.55.0 as one squashed
-commit; everything after it is TitanVSP's. To see exactly what the fork changes:
+plus Titan Dynamics' changes: the Fillet component; interface and usability work across TitanVSP
+and the VSPAERO Viewer (dark theme, perspective view, native file dialogs, graph and viewer mouse
+controls, image export); and export options. The first commit imports upstream OpenVSP 3.55.0 as
+one squashed commit; everything after it is TitanVSP's. To see exactly what the fork changes:
 
 ```sh
 git diff $(git rev-list --max-parents=0 HEAD) HEAD --stat
@@ -22,7 +24,9 @@ there: smaller diffs keep upstream updates easy (see [Upstream updates](#upstrea
 | --- | --- |
 | `src/geom_core/` | The model: `Vehicle`, `Geom` and every component type, Parms, XML I/O. **`FilletGeom.cpp/.h` is TitanVSP's.** |
 | `src/gui_and_draw/` | FLTK screens. `ScreenMgr.cpp` holds the dark theme and the file chooser; `ManageGeomScreen.cpp` registers each component's screen. **`FilletScreen.cpp/.h` is TitanVSP's.** |
-| `src/vsp_graphic/` | OpenGL rendering: `Camera`, `Viewport`, `Background`, picking. |
+| `src/vsp_graphic/` | OpenGL rendering: `Camera`, `Viewport`, `Background`, `Display`/`LayoutMgr`, picking. **`include/TitanLogo.h` (the embedded logo) is TitanVSP's.** |
+| `src/vsp_aero/Viewer/` | The VSPAERO Viewer, `vspviewer.exe`: a separate FLTK/OpenGL program (`glviewer.C`, `vspaero_viewer.C`, UI in `viewerUI.fl`). |
+| `src/external/cartesian/` | The graph library behind OpenVSP's plots (upstream, with one TitanVSP hook; see [Plots](#plots-results-manager)). |
 | `src/geom_api/` | Public API (`APIDefines.h` enums, `VSP_Geom_API`); SWIG makes the Python bindings from it. |
 | `src/vsp/main.h.in` | Version strings (the TitanVSP name). |
 | `dev/` | Windows build, run and shortcut scripts (TitanVSP's). |
@@ -42,9 +46,9 @@ powershell -ExecutionPolicy Bypass -File dev\run.ps1     # build, then launch vs
   (the CMake tree), `install` (the runnable `vsp.exe`), and `vsp\venv` (Python with `openvsp`).
 - The freshly linked exe is `..\OpenVSP-build\vsp\vsp\Release\vsp.exe`. The install step copies
   it to `install\`.
-- **`file INSTALL cannot copy file`** means `vsp.exe` is running and locked. Everything still
-  compiled. Don't kill the user's running app: ask them to close it, or test with the Release
-  exe.
+- **`file INSTALL cannot copy file`** means `vsp.exe` or `vspviewer.exe` is running and locked.
+  Everything still compiled. Don't kill the user's running app: ask them to close it, or test
+  with the Release exe (`..\OpenVSP-build\vsp\vsp\Release\`).
 - The release zip comes from
   `cmake --build ..\OpenVSP-build\vsp --config Release --target PACKAGE`, which writes
   `..\OpenVSP-build\vsp\TitanVSP-3.55.0-win64.zip`.
@@ -57,8 +61,15 @@ them:
   (no open, non-manifold or degenerate edges) whenever the fillet changes.
 - **GUI:** launch `vsp.exe` with a `.vsp3` and look at it, or take screenshots of its windows.
   The Python facade (`openvsp_config.LOAD_FACADE = True`, then `vsp.StartGUI()`) can open
-  screens from a script. It parses `sys.argv`, so pass a script's own arguments through
+  screens from a script, and can run analyses such as VSPAERO in the same process so the
+  Results Manager has data. It parses `sys.argv`, so pass a script's own arguments through
   environment variables.
+- **Driving the GUI:** the user often has TitanVSP or the VSPAERO Viewer open. Launch your own
+  copy, and send input and screenshots only to that process's windows, by process ID, never by
+  process name. FLTK menus close when another window takes focus, so click through a menu in one
+  go.
+- **STL exports:** an STL export leaves a Mesh component in the model and hides the rest, and the
+  next export reuses that mesh. Start each export you compare from a fresh model.
 - **Upstream code:** before saying a change is safe, check the other screens or callers that
   share the code.
 
@@ -248,6 +259,42 @@ header comment gives the outline; this section covers what you need to change it
   and before the plotted objects. `Vsp_Canvas` uses it to draw x = 0 and y = 0 light. Keep this
   hook when updating the Cartesian library.
 
+## VSPAERO Viewer
+
+`vspviewer.exe` is its own program in `src/vsp_aero/Viewer`; none of TitanVSP's GUI code reaches
+it.
+
+- **UI source:** the build regenerates `viewerUI.C`/`.H` from `viewerUI.fl` with fluid, so edit the
+  `.fl` file. The checked-in `viewerUI.C` isn't compiled; keep it in step anyway.
+- **Theme:** `ApplyDarkTheme` and `DarkTitleBars` in `vspaero_viewer.C`, as in TitanVSP, except
+  that palette entries 2, 4, 5, 6 and 231 become muted colours: the viewer uses them as button
+  and frame backgrounds, not text.
+- **Background:** `GL_VIEWER::DrawWithWhiteBackgroundIsOn` picks the 3D view's background. 0 (the
+  default) is TitanVSP's dark slate, 1 is white; drawing code that depends on the background
+  checks this flag (wakes, rotor outlines, text colour).
+- **Mouse:** `GL_VIEWER::handle` with `DragMode()` (which buttons and keys mean rotate, pan or
+  zoom) and `PanPerPixel()`. The view is an orthographic box `3 * ViewSize` wide, and
+  `NewTransX/Y` are applied in screen space, scaled by `NewScale * ZoomScale`. Pans and wheel zooms
+  use that to keep the model under the cursor.
+- **Image export:** `GL_VIEWER::SaveImage` (width dialog, native Save dialog) and
+  `RenderToPNG`, which draws into a framebuffer object of the chosen size. The viewer links only
+  OpenGL 1.1, so the FBO functions are looked up with `wglGetProcAddress` (Windows only; elsewhere
+  it saves at the window's size). `Draw()` takes its viewport size from `ViewW()`/`ViewH()` so it
+  can draw at the image's size; the 2D overlays work in `w()`/`h()` units and scale with it.
+
+## STL export resolution
+
+- **Settings:** `Vehicle::m_STLResOverride` and `m_STLTessU`, `m_STLSectTessU`, `m_STLTessW`,
+  `m_STLCapTess` (`STLSettings` group), shown in `STLOptionsScreen`, whose Cancel and Close put
+  every setting back.
+- **Override:** `Vehicle::ExportFile`'s STL branch calls `OverrideSTLTess` before writing and
+  `RestoreExportTess` after. The override sets `SectTess_U` on every section of Geoms with
+  `XSecSurf`s (wings, fuselages, stacks), `Tess_U` on the rest, and `Tess_W` and `CapUMinTess` on
+  all of them, for the Geoms in the export set (every Geom when a mode is used). It records each
+  Parm it changes with its old value, and the restore sets them back exactly, last first. Don't
+  restore through `Parm::GetLastVal()`: it's only the previous value, not the one before the
+  export.
+
 ## File chooser
 
 `ScreenMgr::FileChooser` is the single entry point for every open/save dialog. It reads the
@@ -273,6 +320,7 @@ version numbers in [README.md](README.md), [CHANGES.md](CHANGES.md) and the rele
 
 ## Releases
 
-Releases are on GitHub, tagged `v<openvsp version>-titan.<n>` (e.g. `v3.55.0-titan.2`), with the
+Releases are on GitHub, tagged `v<openvsp version>-titan.<n>` (e.g. `v3.55.0-titan.3`), with the
 `PACKAGE` zip attached and its SHA-256 in the notes. Make a new tag for each release rather than
-moving an old one.
+moving an old one, and delete the release it replaces only when asked. Keep the release table at
+the top of [CHANGES.md](CHANGES.md) current, including what's on `main` but not yet released.

@@ -1,15 +1,21 @@
 # TitanVSP
 
-TitanVSP is [OpenVSP](https://github.com/OpenVSP/OpenVSP) **3.55.0** with a **Fillet**
-component that blends wings and fuselages into each other with smooth rolling-ball
-fillets, a dark theme, a perspective view, the system file dialog, and Windows scripts that
-build and launch it in one step. Everything else is upstream OpenVSP, unchanged.
+TitanVSP is Titan Dynamics' build of [OpenVSP](https://github.com/OpenVSP/OpenVSP) **3.55.0**,
+NASA's parametric aircraft geometry tool. It adds a **Fillet** component that blends wings and
+fuselages into each other with smooth rolling-ball fillets, and reworks the day-to-day
+experience: a dark interface, a perspective 3D view, the Windows file dialogs, VSPAERO results you
+can pan, zoom and read values from, a VSPAERO Viewer that handles like the main 3D view and saves
+high-resolution images, and more control over exports. Windows scripts build and launch it in one
+step.
+
+Models, scripts and the `openvsp` Python API work as they do in OpenVSP 3.55.0.
 
 **What's changed:** every change from upstream OpenVSP is listed in [CHANGES.md](CHANGES.md).
 
 **Download:** a ready-to-run Windows build is on the
 [Releases](https://github.com/Titan-Dynamics/TitanVSP/releases) page.
 
+- [Highlights](#highlights)
 - [About OpenVSP](#about-openvsp)
 - [Build and run](#build-and-run)
 - [What's new in TitanVSP](#whats-new-in-titanvsp)
@@ -23,6 +29,19 @@ build and launch it in one step. Everything else is upstream OpenVSP, unchanged.
   <img align="top" width="208" alt="Adding a FILLET in the Geom Browser" src="docs/images/geom-browser-add-fillet.png" />
   <img align="top" width="302" alt="The Fillet's Design tab" src="docs/images/fillet-design-tab.png" />
 </p>
+
+## Highlights
+
+| Area | What TitanVSP adds |
+| --- | --- |
+| **Geometry** | A **Fillet** component: smooth, watertight rolling-ball fillets at wing roots and wherever two bodies meet. |
+| **Interface** | A dark theme throughout, including title bars and the 3D view; light component lines with white selection highlights; the Titan Dynamics logo in the 3D view. |
+| **3D view** | An orthographic/perspective switch (**View → Perspective**, key **5**) that keeps the framing. |
+| **Files** | The Windows Open and Save dialogs for every open, save, import and export. |
+| **VSPAERO results** | Results Manager plots you can drag to pan, wheel to zoom, and hover to read x and y, with light x = 0 and y = 0 axes. |
+| **VSPAERO Viewer** | A dark theme, the main 3D view's mouse controls, and PNG export at any width through the Save dialog. |
+| **Export** | STL export at a resolution you choose, without changing the model; STEP and IGES in millimetres by default. |
+| **Development** | One-step Windows build and run scripts, and a Python venv with the bindings. |
 
 ## About OpenVSP
 
@@ -79,7 +98,7 @@ powershell -ExecutionPolicy Bypass -File dev\install-shortcut.ps1
 
 | Script | What it does |
 | --- | --- |
-| `dev\build.ps1` | Builds the libraries (first time only) and OpenVSP, and installs it. `-Clean` rebuilds OpenVSP from scratch; `-CleanAll` rebuilds the libraries too. |
+| `dev\build.ps1` | Builds the libraries (first time only) and TitanVSP, and installs it. `-Clean` rebuilds TitanVSP from scratch; `-CleanAll` rebuilds the libraries too. |
 | `dev\run.ps1` | Incremental build, then launches `vsp.exe`. `-NoBuild` just launches the last build. |
 | `dev\install-shortcut.ps1` | Creates the "TitanVSP (Dev)" shortcut, which runs `run.ps1`. |
 
@@ -88,13 +107,14 @@ The build output lives next to the repo, not inside it:
 ```
 <parent>\TitanVSP                 this repo
 <parent>\OpenVSP-build\Libraries  third-party libraries (built once)
-<parent>\OpenVSP-build\vsp        OpenVSP build tree
-<parent>\OpenVSP-build\install    runnable OpenVSP: vsp.exe and its resources
+<parent>\OpenVSP-build\vsp        the build tree
+<parent>\OpenVSP-build\install    runnable TitanVSP: vsp.exe, vspviewer.exe and their resources
 <parent>\OpenVSP-build\vsp\venv   Python venv with the openvsp package
 ```
 
-Close OpenVSP before rebuilding. A running `vsp.exe` can't be overwritten, so the install
-step fails with `file INSTALL cannot copy file`. The Python module is still rebuilt.
+Close TitanVSP and the VSPAERO Viewer before rebuilding. A running `vsp.exe` or `vspviewer.exe`
+can't be overwritten, so the install step fails with `file INSTALL cannot copy file`. Everything
+is still compiled, and the Python module is still rebuilt.
 
 **Python API.** The build creates a venv with the `openvsp` package installed in editable mode
 from the build tree. After you rebuild, it uses the new bindings automatically:
@@ -110,11 +130,12 @@ See [dev/README.md](dev/README.md) for more on the scripts.
 
 TitanVSP's changes are plain C++ in the normal source tree, so follow the
 [upstream build instructions](https://github.com/OpenVSP/OpenVSP/blob/main/README.md).
-Using the SuperProject is the easy route. TitanVSP has only been built and tested on Windows.
+Using the SuperProject is the easy route. TitanVSP has only been built and tested on Windows; the
+dark title bars, and the VSPAERO Viewer's large image export, are Windows-only.
 
 ## What's new in TitanVSP
 
-This section covers the main features. [CHANGES.md](CHANGES.md) lists every change from
+This section covers how to use the main features. [CHANGES.md](CHANGES.md) lists every change from
 upstream OpenVSP. If you're working on the code, including with a coding agent, start with
 [AGENTS.md](AGENTS.md), which explains how the fork's code works.
 
@@ -192,21 +213,61 @@ The parameters are `Radius`, `NumStations`, `TETaper` and `Sink`, all in the `De
 - If the ball can't fit all the way round a junction, the status line says so; try a smaller
   **Radius**.
 - A rebuild takes about 0.1–1.5 s, depending on the junction.
+- Fillets are a TitanVSP component; upstream OpenVSP doesn't know them.
 
 ### Dark theme
 
 The interface, window title bars and 3D view are dark. Components draw in light grey, and the
-selected one is outlined in white.
+selected one is outlined in white. Airfoils in the XSec View show in white. The Titan Dynamics
+logo sits in the top-right corner of the 3D view, behind the model.
 
 ### Perspective view
 
 **View → Perspective** (key **5**) switches the 3D view between orthographic and perspective,
 keeping the same framing.
 
-### System file dialog
+### Windows file dialogs
 
-Open, save, import and export use the Windows file dialog. OpenVSP's own chooser is still
+Open, save, import and export use the Windows file dialogs. OpenVSP's own chooser is still
 under **File → Preferences… → File Chooser**.
+
+### VSPAERO results plots
+
+In **Results Manager - VSPAERO**, every plot can be explored with the mouse:
+
+| Mouse | What it does |
+| --- | --- |
+| Drag | Pan |
+| Wheel | Zoom about the cursor. Hold **Ctrl** for x only, **Shift** for y only. |
+| Double-click | Back to the automatic fit |
+| Hover | Crosshair, with the x and y under the cursor in the plot's top-right corner |
+
+A pan or zoom sets the plot's Xmin/Xmax/Ymin/Ymax under **Actions** to the new view. The lines
+x = 0 and y = 0 are drawn light so they're easy to see.
+
+### VSPAERO Viewer
+
+The VSPAERO Viewer (`vspviewer.exe`) has the dark theme too, and its 3D view handles like the main
+one:
+
+| Mouse | What it does |
+| --- | --- |
+| Left-drag | Rotate |
+| Right-drag, or Alt + left-drag | Pan, with the model following the cursor |
+| Middle-drag, Ctrl + left-drag, or left + right drag | Zoom |
+| Wheel | Zoom about the cursor |
+
+**File → SaveAs → PNG File** asks for the image width (the height follows the view's aspect ratio),
+then opens the Save dialog. The image is rendered at that width, so it can be larger than the
+window. **View → Use White Background** switches to a white background for printing.
+
+### Export options
+
+- **STL resolution:** the STL Options window has a **Modify Resolution** checkbox. Ticked, the
+  export uses the **Tess U**, **Section Tess U**, **Tess W** and **Cap Tess** you enter, for every
+  component it exports, and each component gets its own settings back afterwards. Unticked (the
+  default), it exports as the model is.
+- **STEP and IGES** export in millimetres by default.
 
 ### Windows dev scripts
 

@@ -4,26 +4,32 @@ TitanVSP is [OpenVSP](https://github.com/OpenVSP/OpenVSP) 3.55.0 with the change
 history starts with one commit importing OpenVSP 3.55.0 (upstream tag `OpenVSP_3.55.0`); every
 commit after that is TitanVSP's own.
 
-File formats, the `openvsp` Python module and the API are unchanged apart from the new `FILLET`
-component, so OpenVSP models and scripts work as they are.
+**Compatibility.** File formats, the `openvsp` Python module and the API work as in OpenVSP 3.55.0.
+TitanVSP adds to them: the `FILLET` component, and STL export settings on the Vehicle. A few
+defaults differ for new models: component colour, the Fillet's TE Taper, and the STEP and IGES
+length unit. Models keep whatever they were saved with.
 
 - [Releases](#releases)
 - [Fillet component](#fillet-component)
 - [Dark theme](#dark-theme)
-- [Perspective view](#perspective-view)
-- [Windows file dialog](#windows-file-dialog)
+- [3D view](#3d-view)
+- [Windows file dialogs](#windows-file-dialogs)
 - [VSPAERO results plots](#vspaero-results-plots)
-- [TitanVSP name](#titanvsp-name)
+- [VSPAERO Viewer](#vspaero-viewer)
+- [Export options](#export-options)
+- [TitanVSP name and logo](#titanvsp-name-and-logo)
 - [Windows build scripts and Python API](#windows-build-scripts-and-python-api)
+- [Fixes to upstream behaviour](#fixes-to-upstream-behaviour)
 - [Removed](#removed)
 
 ## Releases
 
 | Release | What's in it |
 | --- | --- |
-| [v3.55.0-titan.3](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.3) | Everything on this page. |
-| v3.55.0-titan.2 (withdrawn) | Everything except the VSPAERO results plot changes. It was replaced by titan.3. |
-| v3.55.0-titan.1 (withdrawn) | The Fillet component, the TitanVSP name, and the Windows build scripts. It was replaced by titan.2. |
+| [v3.55.0-titan.4](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.4) | Everything on this page. |
+| v3.55.0-titan.3 (withdrawn) | titan.4 without the VSPAERO Viewer changes, the logo, STL export resolution, STEP and IGES in millimetres, and the Fillet's TE Taper default of 0.75. Replaced by titan.4. |
+| v3.55.0-titan.2 (withdrawn) | titan.3 without the VSPAERO results plot changes. Replaced by titan.3. |
+| v3.55.0-titan.1 (withdrawn) | The Fillet component, the TitanVSP name, and the Windows build scripts. Replaced by titan.2. |
 
 ## Fillet component
 
@@ -49,7 +55,7 @@ touching both parts.
   | --- | --- | --- |
   | `Radius` | 0 (auto) | Ball radius. At 0 the first build picks 8% of the wing's root chord, or 8% of the slimmer body's thickness, and fills it in. |
   | `NumStations` | 41 (9–401) | Cross-sections round the junction. More are added wherever the fillet turns quickly. |
-  | `TETaper` | 0.75 (0–1) | Wing roots only: the fraction of each side over which the radius tapers to nothing at the trailing edge. 0 and greyed out on body fillets. |
+  | `TETaper` | 0.75 (0–1) | Wing roots only: the fraction of each side over which the radius tapers to nothing at the trailing edge. 0 and greyed out on body fillets. (0.15 in titan.3 and earlier.) |
   | `Sink` | 1.0 | How far the fillet's face carries on past each contact, easing under the surface, so it fades in instead of ending on a line. In model units, capped at 4 × Radius. |
 
 - **Status line.** The Fillet's **Design** tab says what it's blending into, or why it couldn't
@@ -62,7 +68,8 @@ How it works is described in [AGENTS.md](AGENTS.md#fillet-component) and at the 
 `src/geom_core/FilletGeom.cpp`.
 
 **Limits:** a wing fillet only blends the wing's root (its first section) into a body. A body
-join must be a closed loop that doesn't cross a flat end cap or a sharp edge.
+join must be a closed loop that doesn't cross a flat end cap or a sharp edge. Upstream OpenVSP
+doesn't know the Fillet component.
 
 ## Dark theme
 
@@ -72,46 +79,28 @@ The whole interface is dark.
   selection. Section divider bars, read-only fields, tooltips, the console, the attribute tree
   and the CompGeom and DegenGeom result panels all follow the theme.
 - **Title bars:** every window asks Windows for a dark title bar (Windows 10 and later).
-- **Logo:** the Titan Dynamics logo sits in the top-right corner of the 3D view, behind the
-  model, about a fifth of the view's width. It's built into the program, so there's no file to
-  keep with it, and it scales smoothly at any window size. Only the main 3D view shows it.
 - **3D view:** the default background is dark slate. Axis labels and colour-scale labels are
   light. **Reset** in Background settings goes back to the dark default.
 - **Line colours:** new components draw in light grey (#aaa) instead of blue. Cross-section and
   sub-surface lines that were black are #aaa too. The selected component's outline, its active
   cross-section, the active sub-surface, the picking hover highlight and the selected viewport's
-  border are white instead of red. A wing's active-section box stays green.
+  border are white instead of red. A wing's active-section box stays green. Models keep the
+  colours saved in them, so only new components pick up #aaa.
 - **XSec View:** the airfoil window opened by **Show** draws its curve in white, and its
   **Reset Defaults** button (and the Curve Editor's) goes back to white.
+- **Graphs:** the grid of OpenVSP's graphs (the Results Manager, Wave Drag and others) is shaded
+  for the dark background.
 
-Models keep the colours saved in them, so only new components pick up #aaa.
+The VSPAERO Viewer has its own dark theme; see [VSPAERO Viewer](#vspaero-viewer).
 
-**VSPAERO Viewer** (`vspviewer.exe`) is dark too: its panels, menus, buttons and title bar use the
-same palette, and its 3D view opens on the same dark slate background, with light text and
-legend. Trailing wakes draw light blue. **View → Use White Background** switches the view to
-white, with the original colours, for printing or screenshots.
-
-The VSPAERO Viewer's 3D view also takes the mouse like TitanVSP's main 3D view: left-drag
-rotates; right-drag or Alt+left-drag pans, with the model following the cursor; middle-drag,
-Ctrl+left-drag or left+right-drag zooms; and the mouse wheel zooms about the point under the
-cursor.
-
-**File → SaveAs → PNG File** in the VSPAERO Viewer asks for the image width (the height follows
-the view's aspect ratio and is shown greyed out), then opens the Windows Save dialog. The image is
-rendered off screen at that size, so it can be larger than the window. It used to ask for a bare
-name and always save at the window's size next to the results.
-
-## Perspective view
+## 3D view
 
 **View → Perspective** (key **5**) switches every viewport between orthographic and perspective
 (30° field of view). The perspective eye stands back far enough that the view keeps the same
 framing, so rotate, pan and zoom carry over and switching back and forth doesn't jump. The screen
 grid, rulers, probes and picking work the same in both modes.
 
-The perspective code already in OpenVSP passed degrees where radians were needed. It has been
-replaced.
-
-## Windows file dialog
+## Windows file dialogs
 
 Open, save, import and export use the operating system's own file dialog by default, instead of
 OpenVSP's built-in chooser. The built-in one, with its favourite folders, is still available under
@@ -133,13 +122,46 @@ Panning or zooming sets the plot's Xmin, Xmax, Ymin and Ymax under **Actions** t
 new limits, so the view stays put when the plot refreshes. Unticking them, or double-clicking,
 hands them back to the automatic fit.
 
-The lines x = 0 and y = 0 draw light over the grid, and the grid is shaded for the dark
-background. This applies to every plot that uses the same graph widget, such as Wave Drag.
+The lines x = 0 and y = 0 draw light over the grid. This applies to every graph that uses the
+same widget, such as Wave Drag.
 
-The greyed-out Time Step box could show -2147483648 instead of 0 when there are no unsteady
-results. That upstream bug, an overflowing conversion of the box's limits, is fixed.
+## VSPAERO Viewer
 
-## TitanVSP name
+The VSPAERO Viewer (`vspviewer.exe`, opened from the VSPAERO screen) is a separate program; it
+gets the same treatment.
+
+- **Dark theme:** its panels, menus, buttons and title bar use TitanVSP's palette, and its 3D view
+  opens on the same dark slate, with light text and legend. Trailing wakes draw light blue.
+  **View → Use White Background** (formerly *Use Blue Background*) switches the view to white,
+  with the original colours, for printing or screenshots.
+- **Mouse:** the 3D view handles like TitanVSP's main view. Left-drag rotates; right-drag or
+  Alt + left-drag pans, with the model following the cursor (it used to move a fixed step per
+  pixel); middle-drag, Ctrl + left-drag or left + right drag zooms; and the mouse wheel, which did
+  nothing, zooms 15% a notch about the point under the cursor.
+- **Saving images:** **File → SaveAs → PNG File** asks for the image width, showing the height
+  that follows from the view's aspect ratio greyed out, then opens the Windows Save dialog in the
+  results' folder. The image is rendered off screen at that size, so it can be larger than the
+  window; text and the legend scale with it. It used to ask for a bare name in a text box and
+  always save `<results>.<name>.png` at the window's size. If the graphics card can't render off
+  screen, the window's size is saved and the user is told. Saved images are opaque, as on screen.
+
+## Export options
+
+- **STL resolution:** the STL Options window has a **Modify Resolution** checkbox, off by
+  default. Ticked, it exports at the resolution entered below it instead of each component's
+  own: **Tess U** (components without sections, such as pods and fillets), **Section Tess U**
+  (every section of wings, fuselages and stacks), **Tess W** and **Cap Tess** (end caps). Each
+  component in the export takes them for the export only, then gets its own settings back. The
+  settings save with the model, and the API's STL export uses them too (`ResOverride`, `TessU`,
+  `SectTessU`, `TessW` and `CapTess` in the Vehicle's `STLSettings` group).
+
+  As in upstream OpenVSP, an STL export turns the exported components into a Mesh component,
+  leaves it in the model and hides the originals; exporting again writes that mesh. To export
+  at another resolution, delete the Mesh and show the components again first.
+- **STEP and IGES units:** new models export STEP and IGES files in millimetres instead of feet.
+  Models that were saved with another unit keep it.
+
+## TitanVSP name and logo
 
 The app calls itself TitanVSP 3.55.0 everywhere a user sees a name: window titles, the `-help`
 banner, `GetVSPVersion()`, the headers of exported STEP, IGES, NASTRAN, Calculix and DXF files,
@@ -149,6 +171,10 @@ Kept as they were, because code, files or settings depend on them: exe and libra
 `openvsp` Python module and API names, file format markers (`.vsp3`, `OPENVSP_XSEC_FILE_V1`
 and so on), the `FC_OPENVSP` enum, the preferences store, links to the OpenVSP wiki and help,
 and the macOS and Linux package names.
+
+The Titan Dynamics logo sits in the top-right corner of the main 3D view, behind the model, about
+a fifth of the view's width. It's built into the program, so there's no file to keep with it, and
+it scales smoothly at any window size. Other 3D windows, such as the XSec View, don't show it.
 
 ## Windows build scripts and Python API
 
@@ -162,6 +188,14 @@ and the macOS and Linux package names.
   Upstream left it blank, so conda could build an environment the bindings couldn't load.
 
 See [README.md](README.md#build-and-run) and [dev/README.md](dev/README.md).
+
+## Fixes to upstream behaviour
+
+- **Perspective:** the perspective code already in OpenVSP passed degrees where radians were
+  needed. It has been replaced by the switch described under [3D view](#3d-view).
+- **Time Step box:** in the Results Manager, the greyed-out Time Step box could show
+  -2147483648 instead of 0 when there were no unsteady results: a Parm limit of 1e12 overflowed
+  when converted to an integer. Index selectors now clamp their limits.
 
 ## Removed
 
