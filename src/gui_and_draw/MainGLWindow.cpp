@@ -60,6 +60,8 @@
 #include "VSPAEROScreen.h"
 #include "WaveDragScreen.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+
 #pragma warning(disable:4244)
 
 using namespace VSPGraphic;
@@ -76,6 +78,12 @@ VspGlWindow::VspGlWindow( int x, int y, int w, int h, ScreenMgr * mgr, DrawObj::
 
     // Link this GUI to one of drawObj screen.
     m_LinkedScreen = drawObjScreen;
+
+    m_GizmoAxis = -1;
+    m_GizmoHover = -1;
+    m_GizmoPx = 1.0f;
+    m_GizmoSteps = 0;
+    m_GizmoUndoSaved = false;
 
     // One Screen
     m_GEngine->getDisplay()->setDisplayLayout( 1, 1 );
@@ -181,6 +189,8 @@ void VspGlWindow::draw()
     }
 
     m_GEngine->draw( m_mouse_x, m_mouse_y );
+
+    GizmoDraw();
 }
 
 int VspGlWindow::handle( int fl_event )
@@ -209,14 +219,28 @@ int VspGlWindow::handle( int fl_event )
         return 1;
 
     case FL_PUSH:
+        if ( GizmoPush( x, y ) )
+        {
+            return 1;
+        }
         OnPush( x, y );
         return 1;
 
     case FL_DRAG:
+        if ( m_GizmoAxis >= 0 )
+        {
+            GizmoDrag( x, y );
+            return 1;
+        }
         OnDrag( x, y );
         return 1;
 
     case FL_RELEASE:
+        if ( m_GizmoAxis >= 0 )
+        {
+            GizmoRelease();
+            return 1;
+        }
         OnRelease( x, y );
         return 1;
 
@@ -228,6 +252,15 @@ int VspGlWindow::handle( int fl_event )
         if( m_GEngine->getScene()->isPickingEnabled() )
         {
             redraw();
+        }
+        else
+        {
+            int hover = GizmoShown() ? GizmoHit( x, y ) : -1;
+            if ( hover != m_GizmoHover )
+            {
+                m_GizmoHover = hover;
+                redraw();
+            }
         }
         return 1;
 
@@ -2814,6 +2847,380 @@ int VspGlWindow::OnKeydown()
     redraw();
 
     return handled;
+}
+
+//==== TitanVSP: move gizmo ====//
+
+namespace
+{
+// Blender's gizmo axis colours.
+const float GIZMO_COLOR[3][3] = { { 1.0f, 0.2f, 0.32f }, { 0.54f, 0.86f, 0.0f }, { 0.16f, 0.56f, 1.0f } };
+
+// The components the gizmo moves: the selected ones whose location can be set.  A Fillet, for
+// one, is built in place and has its location greyed out.
+vector< Geom* > GizmoGeoms()
+{
+    vector< Geom* > out;
+    Vehicle* veh = VehicleMgr.GetVehicle();
+    if ( !veh )
+    {
+        return out;
+    }
+    for ( Geom* g : veh->GetActiveGeomPtrVec() )
+    {
+        if ( !g )
+        {
+            continue;
+        }
+        bool rel = g->m_AbsRelFlag() == vsp::REL;
+        Parm & loc = rel ? g->m_XRelLoc : g->m_XLoc;
+        if ( loc.GetActiveFlag() )
+        {
+            out.push_back( g );
+        }
+    }
+    return out;
+}
+
+// Distance from p to the segment a-b.
+float SegDist( const glm::vec2 & p, const glm::vec2 & a, const glm::vec2 & b )
+{
+    glm::vec2 ab = b - a;
+    float len2 = glm::dot( ab, ab );
+    float t = len2 > 0.0f ? glm::clamp( glm::dot( p - a, ab ) / len2, 0.0f, 1.0f ) : 0.0f;
+    return glm::length( p - ( a + t * ab ) );
+}
+}
+
+// In the main window, with something movable selected, and not while picking points or parts.
+bool VspGlWindow::GizmoShown()
+{
+    if ( m_LinkedScreen != DrawObj::VSP_MAIN_SCREEN || !m_GEngine || m_GEngine->getScene()->isPickingEnabled() )
+    {
+        return false;
+    }
+    return !GizmoGeoms().empty();
+}
+
+// Where the gizmo sits on screen: the middle of the selected components' origins, projected
+// through the selected viewport's camera as the model is drawn.
+bool VspGlWindow::GizmoGetFrame( GizmoFrame & f )
+{
+    vector< Geom* > geoms = GizmoGeoms();
+    if ( geoms.empty() )
+    {
+        return false;
+    }
+
+    VSPGraphic::Display * display = m_GEngine->getDisplay();
+    VSPGraphic::Viewport * vp = display ? display->getViewport() : nullptr;
+    VSPGraphic::Camera * cam = display ? display->getCamera() : nullptr;
+    if ( !vp || !cam || vp->width() <= 0 || vp->height() <= 0 )
+    {
+        return false;
+    }
+
+    vec3d o;
+    for ( Geom* g : geoms )
+    {
+        o = o + vec3d( g->m_XLoc(), g->m_YLoc(), g->m_ZLoc() );
+    }
+    o = o * ( 1.0 / geoms.size() );
+
+    glm::mat4 mv = cam->getModelViewMatrix();
+    glm::mat4 pr = cam->getProjectionMatrix();
+    glm::vec4 view( vp->x(), vp->y(), vp->width(), vp->height() );
+
+    glm::vec3 wo( o.x(), o.y(), o.z() );
+    glm::vec3 so = glm::project( wo, mv, pr, view );
+    if ( so.z < 0.0f || so.z > 1.0f )
+    {
+        return false;
+    }
+    f.m_Origin = glm::vec2( so.x, so.y );
+
+    // A step along each axis small next to the view, so perspective doesn't bend it.
+    float step = 1.0f;
+    {
+        glm::vec3 a = glm::unProject( glm::vec3( so.x, so.y, so.z ), mv, pr, view );
+        glm::vec3 b = glm::unProject( glm::vec3( so.x + 50.0f, so.y, so.z ), mv, pr, view );
+        float d = glm::length( b - a );
+        if ( d > 0.0f && std::isfinite( d ) )
+        {
+            step = d;
+        }
+    }
+
+    float maxlen = 0.0f;
+    float len[3];
+    for ( int i = 0; i < 3; i++ )
+    {
+        glm::vec3 axis( 0.0f );
+        axis[i] = step;
+        glm::vec3 se = glm::project( wo + axis, mv, pr, view );
+        glm::vec2 d( se.x - so.x, se.y - so.y );
+        len[i] = glm::length( d );
+        f.m_Dir[i] = len[i] > 0.0f ? d / len[i] : glm::vec2( 0.0f );
+        f.m_PxPerUnit[i] = len[i] / step;
+        maxlen = std::max( maxlen, len[i] );
+    }
+    for ( int i = 0; i < 3; i++ )
+    {
+        f.m_Visible[i] = maxlen > 0.0f && len[i] > 0.2f * maxlen;
+    }
+    return true;
+}
+
+// The axis whose arrow is under ( x, y ), or -1.
+int VspGlWindow::GizmoHit( int x, int y )
+{
+    GizmoFrame f;
+    if ( !GizmoGetFrame( f ) )
+    {
+        return -1;
+    }
+
+    float ppu = pixels_per_unit();
+    glm::vec2 p( x, y );
+    int best = -1;
+    float bestd = 9.0f * ppu;
+    for ( int i = 0; i < 3; i++ )
+    {
+        if ( !f.m_Visible[i] )
+        {
+            continue;
+        }
+        glm::vec2 a = f.m_Origin + f.m_Dir[i] * ( 14.0f * ppu );
+        glm::vec2 b = f.m_Origin + f.m_Dir[i] * ( 116.0f * ppu );
+        float d = SegDist( p, a, b );
+        if ( d < bestd )
+        {
+            bestd = d;
+            best = i;
+        }
+    }
+    return best;
+}
+
+// A left click on an arrow starts a move along it; anything else is left to the view.
+bool VspGlWindow::GizmoPush( int x, int y )
+{
+    if ( Fl::event_button() != FL_LEFT_MOUSE || Fl::event_state( FL_SHIFT | FL_CTRL | FL_ALT | FL_META ) ||
+         !GizmoShown() )
+    {
+        return false;
+    }
+
+    int axis = GizmoHit( x, y );
+    GizmoFrame f;
+    if ( axis < 0 || !GizmoGetFrame( f ) || f.m_PxPerUnit[axis] <= 0.0f )
+    {
+        return false;
+    }
+
+    m_GizmoAxis = axis;
+    m_GizmoHover = axis;
+    m_GizmoStart = glm::vec2( x, y );
+    m_GizmoDir = f.m_Dir[axis];
+    m_GizmoPx = f.m_PxPerUnit[axis];
+    m_GizmoSteps = 0;
+    m_GizmoUndoSaved = false;
+
+    m_GizmoGeoms.clear();
+    m_GizmoRel.clear();
+    m_GizmoStartLoc.clear();
+    m_GizmoAttachInv.clear();
+    for ( Geom* g : GizmoGeoms() )
+    {
+        bool rel = g->m_AbsRelFlag() == vsp::REL;
+        m_GizmoGeoms.push_back( g->GetID() );
+        m_GizmoRel.push_back( rel );
+        if ( rel )
+        {
+            m_GizmoStartLoc.push_back( vec3d( g->m_XRelLoc(), g->m_YRelLoc(), g->m_ZRelLoc() ) );
+        }
+        else
+        {
+            m_GizmoStartLoc.push_back( vec3d( g->m_XLoc(), g->m_YLoc(), g->m_ZLoc() ) );
+        }
+        Matrix4d inv = g->getAttachMatrix();
+        inv.affineInverse();
+        m_GizmoAttachInv.push_back( inv );
+    }
+
+    redraw();
+    return true;
+}
+
+// Moves the components along the axis by the whole number of units the cursor has travelled
+// along it on screen.  A component placed relative to its parent moves by the same amount in the
+// model: the move is turned back through the parent's attachment rotation into its own Rel
+// Location.
+void VspGlWindow::GizmoDrag( int x, int y )
+{
+    float along = glm::dot( glm::vec2( x, y ) - m_GizmoStart, m_GizmoDir );
+    int steps = ( int )std::lround( along / m_GizmoPx );
+    if ( steps == m_GizmoSteps )
+    {
+        return;
+    }
+    m_GizmoSteps = steps;
+
+    Vehicle* veh = VehicleMgr.GetVehicle();
+    if ( !veh )
+    {
+        return;
+    }
+
+    vec3d move;
+    move[ m_GizmoAxis ] = steps;
+
+    // Undo, as for a slider: the move's first step is set as a change of its own, which records
+    // where each Parm started; the rest are drag updates, which aren't recorded.  Undo then puts
+    // the components back where the drag began.
+    bool drag = m_GizmoUndoSaved;
+    m_GizmoUndoSaved = true;
+
+    for ( int i = 0; i < ( int )m_GizmoGeoms.size(); i++ )
+    {
+        Geom* g = veh->FindGeom( m_GizmoGeoms[i] );
+        if ( !g )
+        {
+            continue;
+        }
+
+        vec3d loc;
+        if ( m_GizmoRel[i] )
+        {
+            loc = m_GizmoStartLoc[i] + m_GizmoAttachInv[i].xformnorm( move );
+            g->m_XRelLoc.SetFromDevice( loc.x(), drag );
+            g->m_YRelLoc.SetFromDevice( loc.y(), drag );
+            g->m_ZRelLoc.SetFromDevice( loc.z(), drag );
+        }
+        else
+        {
+            loc = m_GizmoStartLoc[i] + move;
+            g->m_XLoc.SetFromDevice( loc.x(), drag );
+            g->m_YLoc.SetFromDevice( loc.y(), drag );
+            g->m_ZLoc.SetFromDevice( loc.z(), drag );
+        }
+    }
+
+    m_ScreenMgr->SetUpdateFlag( true );
+    redraw();
+}
+
+void VspGlWindow::GizmoRelease()
+{
+    m_GizmoAxis = -1;
+    m_GizmoGeoms.clear();
+    m_GizmoRel.clear();
+    m_GizmoStartLoc.clear();
+    m_GizmoAttachInv.clear();
+    m_ScreenMgr->SetUpdateFlag( true );
+    redraw();
+}
+
+// The arrows, over everything, at a fixed size on screen.  The one under the cursor, or being
+// dragged, is drawn brighter and wider.
+void VspGlWindow::GizmoDraw()
+{
+    GizmoFrame f;
+    if ( !GizmoShown() || !GizmoGetFrame( f ) )
+    {
+        return;
+    }
+
+    float ppu = pixels_per_unit();
+    const float gap = 14.0f * ppu, len = 100.0f * ppu, head = 16.0f * ppu, half = 6.0f * ppu;
+
+    GLint program = 0;
+    glGetIntegerv( GL_CURRENT_PROGRAM, &program );
+    glUseProgram( 0 );
+
+    glPushAttrib( GL_ALL_ATTRIB_BITS );
+    glDisable( GL_SCISSOR_TEST );
+    glDisable( GL_DEPTH_TEST );
+    glDisable( GL_LIGHTING );
+    glDisable( GL_TEXTURE_2D );
+    glDisable( GL_CULL_FACE );
+    glEnable( GL_BLEND );
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    glEnable( GL_LINE_SMOOTH );
+
+    glViewport( 0, 0, pixel_w(), pixel_h() );
+    glMatrixMode( GL_PROJECTION );
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho( 0, pixel_w(), 0, pixel_h(), -1, 1 );
+    glMatrixMode( GL_MODELVIEW );
+    glPushMatrix();
+    glLoadIdentity();
+
+    // Back to front: the axes pointing away from the viewer first does not matter on screen, so
+    // draw the hovered one last to keep it on top.
+    int order[3] = { 0, 1, 2 };
+    int active = m_GizmoAxis >= 0 ? m_GizmoAxis : m_GizmoHover;
+    if ( active >= 0 )
+    {
+        std::swap( order[ active ], order[2] );
+    }
+
+    for ( int k = 0; k < 3; k++ )
+    {
+        int i = order[k];
+        if ( !f.m_Visible[i] )
+        {
+            continue;
+        }
+        bool hot = i == active;
+        float c[3] = { GIZMO_COLOR[i][0], GIZMO_COLOR[i][1], GIZMO_COLOR[i][2] };
+        if ( hot )
+        {
+            for ( float & ch : c )
+            {
+                ch = ch + ( 1.0f - ch ) * 0.45f;
+            }
+        }
+        glColor4f( c[0], c[1], c[2], 1.0f );
+
+        glm::vec2 d = f.m_Dir[i];
+        glm::vec2 n( -d.y, d.x );
+        glm::vec2 a = f.m_Origin + d * gap;
+        glm::vec2 b = f.m_Origin + d * len;
+        glm::vec2 tip = f.m_Origin + d * ( len + head );
+
+        glLineWidth( ( hot ? 4.0f : 3.0f ) * ppu );
+        glBegin( GL_LINES );
+        glVertex2f( a.x, a.y );
+        glVertex2f( b.x, b.y );
+        glEnd();
+
+        glBegin( GL_TRIANGLES );
+        glVertex2f( tip.x, tip.y );
+        glVertex2f( b.x + n.x * half, b.y + n.y * half );
+        glVertex2f( b.x - n.x * half, b.y - n.y * half );
+        glEnd();
+    }
+
+    // A small white ring at the origin.
+    glColor4f( 1.0f, 1.0f, 1.0f, 0.9f );
+    glLineWidth( 2.0f * ppu );
+    glBegin( GL_LINE_LOOP );
+    for ( int k = 0; k < 24; k++ )
+    {
+        float t = 2.0f * 3.14159265f * k / 24.0f;
+        glVertex2f( f.m_Origin.x + 5.0f * ppu * std::cos( t ), f.m_Origin.y + 5.0f * ppu * std::sin( t ) );
+    }
+    glEnd();
+
+    glMatrixMode( GL_PROJECTION );
+    glPopMatrix();
+    glMatrixMode( GL_MODELVIEW );
+    glPopMatrix();
+    glPopAttrib();
+
+    glUseProgram( program );
 }
 
 int VspGlWindow::OnWheelScroll( int dx, int dy, int x, int y )

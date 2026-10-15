@@ -179,6 +179,36 @@ private:
     int OnKeydown();
     int OnWheelScroll( int dx, int dy, int x, int y );
 
+    //==== TitanVSP: move gizmo ====//
+    // Arrows along X, Y and Z at the selected components' origin, as in Blender: drag one to move
+    // them along that axis, in whole units.  Main window only.
+    struct GizmoFrame
+    {
+        glm::vec2 m_Origin;         // Window pixels, from the bottom left.
+        glm::vec2 m_Dir[3];         // Unit screen direction of each axis.
+        float m_PxPerUnit[3];       // Screen pixels one model unit along each axis spans.
+        bool m_Visible[3];          // Hidden when the axis points at the viewer.
+    };
+    bool GizmoShown();
+    bool GizmoGetFrame( GizmoFrame & f );
+    int GizmoHit( int x, int y );
+    bool GizmoPush( int x, int y );
+    void GizmoDrag( int x, int y );
+    void GizmoRelease();
+    void GizmoDraw();
+
+    int m_GizmoAxis;                // Axis being dragged, or -1.
+    int m_GizmoHover;               // Axis under the cursor, or -1.
+    glm::vec2 m_GizmoStart;         // Where the drag started.
+    glm::vec2 m_GizmoDir;           // The dragged axis on screen, and its pixels per unit.
+    float m_GizmoPx;
+    int m_GizmoSteps;               // Whole units moved so far.
+    bool m_GizmoUndoSaved;          // The drag's starting place is on the undo stack.
+    vector< string > m_GizmoGeoms;  // What's being moved, how, and from where.
+    vector< bool > m_GizmoRel;
+    vector< vec3d > m_GizmoStartLoc;
+    vector< Matrix4d > m_GizmoAttachInv;
+
 private:
     VSPGraphic::GraphicEngine * m_GEngine;
 

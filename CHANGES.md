@@ -26,7 +26,8 @@ length unit. Models keep whatever they were saved with.
 
 | Release | What's in it |
 | --- | --- |
-| [v3.55.0-titan.4](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.4) | Everything on this page. |
+| Not yet released (`main`) | The move arrows in the 3D view. |
+| [v3.55.0-titan.4](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.4) | Everything else on this page. |
 | v3.55.0-titan.3 (withdrawn) | titan.4 without the VSPAERO Viewer changes, the logo, STL export resolution, STEP and IGES in millimetres, and the Fillet's TE Taper default of 0.75. Replaced by titan.4. |
 | v3.55.0-titan.2 (withdrawn) | titan.3 without the VSPAERO results plot changes. Replaced by titan.3. |
 | v3.55.0-titan.1 (withdrawn) | The Fillet component, the TitanVSP name, and the Windows build scripts. Replaced by titan.2. |
@@ -94,6 +95,15 @@ The whole interface is dark.
 The VSPAERO Viewer has its own dark theme; see [VSPAERO Viewer](#vspaero-viewer).
 
 ## 3D view
+
+**Move arrows.** Selecting components shows Blender-style move arrows at their origin: red X, green
+Y and blue Z, at a fixed size on screen, drawn over the model. Drag an arrow with the left mouse
+button to move the selection along that axis, in whole units from where it started. The arrow under
+the cursor brightens, an axis pointing straight at the viewer is hidden, and components whose
+location can't be set, such as Fillets, aren't moved. A component placed relative to its parent
+still moves along the model's axis; its Rel Location takes the move through the parent's
+attachment rotation. **Undo** puts a dragged component back where the drag began (one undo for
+each location value the drag changed), and the arrows show only in the main 3D view.
 
 **View → Perspective** (key **5**) switches every viewport between orthographic and perspective
 (30° field of view). The perspective eye stands back far enough that the view keeps the same

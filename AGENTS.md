@@ -230,6 +230,29 @@ header comment gives the outline; this section covers what you need to change it
   curve colour is `Vehicle::m_XSecLineColor`, set in the constructor *and* `Wype()`; the
   constructor matters because opening a file at launch never calls `Wype()`.
 
+## Move arrows
+
+The Blender-style move gizmo lives in `VspGlWindow` (`MainGLWindow.cpp`, the `Gizmo*` methods),
+for the main window only (`m_LinkedScreen == VSP_MAIN_SCREEN`; `EditXSecWindow` is a subclass).
+
+- **Screen space:** `GizmoGetFrame` projects the selection's origin (the mean of `X/Y/ZLoc`, which
+  hold the world position in both Abs and Rel modes) and a short step along each axis through the
+  selected viewport's camera (`getModelViewMatrix`/`getProjectionMatrix`, as `Viewport::bind`
+  draws), giving each axis's screen direction and pixels per unit. Arrows are a fixed pixel size;
+  an axis shorter than a fifth of the longest on screen is pointing at the viewer and is hidden.
+- **Events:** `handle()` offers `FL_PUSH` to `GizmoPush` first (plain left click on an arrow), sends
+  `FL_DRAG`/`FL_RELEASE` to the gizmo while it's dragging, and updates the hover on `FL_MOVE`.
+  Everything else goes to the normal rotate/pan/zoom.
+- **Moving:** the cursor's travel along the axis on screen, over pixels per unit, rounded, is the
+  move in whole units from the drag's start. Abs-mode components get it added to `X/Y/ZLoc`;
+  Rel-mode ones to `X/Y/ZRelLoc` after `affineInverse()` of their attach matrix rotates it
+  (`xformnorm`) into the parent's frame, since the model matrix is `Attach * Rel`. Parms are set
+  with `SetFromDevice`, so the model rebuilds. As with a slider drag, the first step of a drag is
+  set with `drag_flag` false, which records an undo entry whose last value is the drag's start,
+  and later steps with `drag_flag` true, which record nothing. (An undo entry restores the value
+  before the change it was recorded with, so recording one before the drag starts would restore
+  the wrong value.) Components whose location Parm is inactive (Fillets) are skipped.
+
 ## Perspective view
 
 - **Camera (`vsp_graphic` `Camera.h/.cpp`):** keeps an orthographic projection
