@@ -190,16 +190,7 @@ void viewerUI::cb_CutPlanesSwapNormals(Fl_Button* o, void* v) {
 }
 
 void viewerUI::cb_FileMenuSaveAsTiff_i(Fl_Menu_*, void*) {
-  const char *val;
-char dum[80];
-sprintf(dum,"");
-val = fl_input("File Name:",dum);
-if ( val != NULL ) {
-
-sprintf(dum,"%s",val);
-glviewer->WritePNGFile(dum);
-
-};
+  glviewer->SaveImage();
 }
 void viewerUI::cb_FileMenuSaveAsTiff(Fl_Menu_* o, void* v) {
   ((viewerUI*)(o->parent()->user_data()))->cb_FileMenuSaveAsTiff_i(o,v);

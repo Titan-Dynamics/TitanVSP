@@ -934,6 +934,17 @@ public:
     int DragMode(void);
     float PanPerPixel(void);
 
+    // TitanVSP: File > SaveAs > PNG File.  Asks for the width (the height follows the view's
+    // aspect ratio), then where to save, and renders the view off screen at that size.
+    void SaveImage(void);
+    int RenderToPNG(const char *FileName, int Width, int Height);
+    int MaxImageSize(void);
+
+    // While rendering off screen, the size of the image; 0 draws to the window.
+    int RenderW_, RenderH_;
+    int ViewW(void) { return RenderW_ > 0 ? RenderW_ : pixel_w(); };
+    int ViewH(void) { return RenderH_ > 0 ? RenderH_ : pixel_h(); };
+
     // Access functions
 
     void SetSize(float InputSize) { size = InputSize; };

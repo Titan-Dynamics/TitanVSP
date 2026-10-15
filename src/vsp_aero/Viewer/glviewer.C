@@ -5,6 +5,15 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "glviewer.H"
+
+#include <FL/Fl_Native_File_Chooser.H>
+#include <FL/Fl_Window.H>
+#include <FL/Fl_Int_Input.H>
+#include <FL/Fl_Button.H>
+#include <FL/Fl_Return_Button.H>
+#include <FL/Fl_Box.H>
+#include <string>
+#include <algorithm>
 #include <FL/fl_ask.H>
 #include <cstring>
 
@@ -112,6 +121,8 @@ GL_VIEWER::GL_VIEWER(int x,int y,int w,int h,const char *l) : Fl_Gl_Window(x,y,w
     DrawLegendIsOn                       = 0;
     DrawLabelIsOn                        = 0;
     DrawWithWhiteBackgroundIsOn          = 0;
+
+    RenderW_ = RenderH_ = 0;
 
     DrawWireFrameIsOn                    = 0;
     DrawShadedIsOn                       = 1;
@@ -8266,7 +8277,7 @@ void GL_VIEWER::Draw(void)
     glEnable(GL_DEPTH_TEST);
 
     glLoadIdentity();
-    glViewport(0, 0, pixel_w(), pixel_h());
+    glViewport(0, 0, ViewW(), ViewH());
     glOrtho(-1.5*ViewSize,1.5*ViewSize,
             -1.5*AR*ViewSize,1.5*AR*ViewSize,
             -15.*ViewSize*NewScale,15.*ViewSize*NewScale);
@@ -8420,7 +8431,7 @@ void GL_VIEWER::Draw(void)
     glEnable(GL_LIGHTING);
 
     glLoadIdentity();
-    glViewport(0, 0, pixel_w(), pixel_h());
+    glViewport(0, 0, ViewW(), ViewH());
     glOrtho(-1.5*ViewSize,1.5*ViewSize,
             -1.5*AR*ViewSize,1.5*AR*ViewSize,
             -15.*ViewSize*NewScale,15.*ViewSize*NewScale);
@@ -13155,6 +13166,11 @@ int GL_VIEWER::WritePNG(char *filename, char *description,
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     
     glReadPixels(x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image);
+
+    // TitanVSP: the view clears with alpha 0.  The window ignores it, but an off screen image
+    // keeps it, which would leave the background transparent; save what the window shows.
+
+    for ( i = 0 ; i < width * height ; i++ ) image[4*i+3] = 255;
     
     ScanLength = 4 * width;
     
@@ -16232,7 +16248,283 @@ static const unsigned char bin_data[] = /* 45361 */
 
 }
 
+/*##############################################################################
+#                                                                              #
+#                    TitanVSP: GL_VIEWER SaveImage                             #
+#                                                                              #
+##############################################################################*/
 
+// The framebuffer object calls are past OpenGL 1.1, so on Windows they are looked up at run time.
 
+#ifndef GL_FRAMEBUFFER
+#define GL_FRAMEBUFFER                0x8D40
+#define GL_RENDERBUFFER               0x8D41
+#define GL_COLOR_ATTACHMENT0          0x8CE0
+#define GL_DEPTH_ATTACHMENT           0x8D00
+#define GL_FRAMEBUFFER_COMPLETE       0x8CD5
+#define GL_MAX_RENDERBUFFER_SIZE      0x84E8
+#endif
+#ifndef GL_DEPTH_COMPONENT24
+#define GL_DEPTH_COMPONENT24          0x81A6
+#endif
 
+#ifdef _WIN32
+#ifndef APIENTRYP
+#define APIENTRYP APIENTRY *
+#endif
+typedef void   ( APIENTRYP FboGenFn )( GLsizei, GLuint * );
+typedef void   ( APIENTRYP FboBindFn )( GLenum, GLuint );
+typedef void   ( APIENTRYP FboStorageFn )( GLenum, GLenum, GLsizei, GLsizei );
+typedef void   ( APIENTRYP FboAttachFn )( GLenum, GLenum, GLenum, GLuint );
+typedef GLenum ( APIENTRYP FboStatusFn )( GLenum );
+typedef void   ( APIENTRYP FboDeleteFn )( GLsizei, const GLuint * );
 
+struct FboFns
+{
+    FboGenFn GenFramebuffers, GenRenderbuffers;
+    FboBindFn BindFramebuffer, BindRenderbuffer;
+    FboStorageFn RenderbufferStorage;
+    FboAttachFn FramebufferRenderbuffer;
+    FboStatusFn CheckFramebufferStatus;
+    FboDeleteFn DeleteFramebuffers, DeleteRenderbuffers;
+
+    bool Load()
+    {
+        GenFramebuffers         = ( FboGenFn )wglGetProcAddress( "glGenFramebuffers" );
+        GenRenderbuffers        = ( FboGenFn )wglGetProcAddress( "glGenRenderbuffers" );
+        BindFramebuffer         = ( FboBindFn )wglGetProcAddress( "glBindFramebuffer" );
+        BindRenderbuffer        = ( FboBindFn )wglGetProcAddress( "glBindRenderbuffer" );
+        RenderbufferStorage     = ( FboStorageFn )wglGetProcAddress( "glRenderbufferStorage" );
+        FramebufferRenderbuffer = ( FboAttachFn )wglGetProcAddress( "glFramebufferRenderbuffer" );
+        CheckFramebufferStatus  = ( FboStatusFn )wglGetProcAddress( "glCheckFramebufferStatus" );
+        DeleteFramebuffers      = ( FboDeleteFn )wglGetProcAddress( "glDeleteFramebuffers" );
+        DeleteRenderbuffers     = ( FboDeleteFn )wglGetProcAddress( "glDeleteRenderbuffers" );
+        return GenFramebuffers && GenRenderbuffers && BindFramebuffer && BindRenderbuffer &&
+               RenderbufferStorage && FramebufferRenderbuffer && CheckFramebufferStatus &&
+               DeleteFramebuffers && DeleteRenderbuffers;
+    }
+};
+#endif
+
+// The largest image the graphics card will render off screen, or the window's size if it can't.
+int GL_VIEWER::MaxImageSize(void)
+{
+
+    make_current();
+
+#ifdef _WIN32
+    FboFns fbo;
+    if ( fbo.Load() ) {
+
+       GLint rb = 0, vp[2] = { 0, 0 };
+       glGetIntegerv( GL_MAX_RENDERBUFFER_SIZE, &rb );
+       glGetIntegerv( GL_MAX_VIEWPORT_DIMS, vp );
+       int m = std::min( (int)rb, std::min( (int)vp[0], (int)vp[1] ) );
+       if ( m > 0 ) return std::min( m, 16384 );
+
+    }
+#endif
+
+    return std::max( pixel_w(), pixel_h() );
+
+}
+
+// Draws the view into an image Width by Height and writes it as a PNG.  The image shows what the
+// window does, at its aspect ratio; text and the legend scale with it.
+int GL_VIEWER::RenderToPNG(const char *FileName, int Width, int Height)
+{
+
+    std::string name( FileName );
+
+    make_current();
+
+#ifdef _WIN32
+    FboFns fbo;
+    if ( fbo.Load() ) {
+
+       GLuint fb = 0, rb[2] = { 0, 0 };
+       fbo.GenFramebuffers( 1, &fb );
+       fbo.GenRenderbuffers( 2, rb );
+
+       fbo.BindFramebuffer( GL_FRAMEBUFFER, fb );
+       fbo.BindRenderbuffer( GL_RENDERBUFFER, rb[0] );
+       fbo.RenderbufferStorage( GL_RENDERBUFFER, GL_RGBA8, Width, Height );
+       fbo.FramebufferRenderbuffer( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rb[0] );
+       fbo.BindRenderbuffer( GL_RENDERBUFFER, rb[1] );
+       fbo.RenderbufferStorage( GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, Width, Height );
+       fbo.FramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rb[1] );
+
+       int ok = fbo.CheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE;
+
+       if ( ok ) {
+
+          RenderW_ = Width;
+          RenderH_ = Height;
+
+          Draw();
+          glFinish();
+
+          WritePNG( &name[0], ( char * )"VSPVIEWER", 0, 0, Width, Height, 0 );
+
+       }
+
+       RenderW_ = RenderH_ = 0;
+
+       fbo.BindFramebuffer( GL_FRAMEBUFFER, 0 );
+       fbo.BindRenderbuffer( GL_RENDERBUFFER, 0 );
+       fbo.DeleteRenderbuffers( 2, rb );
+       fbo.DeleteFramebuffers( 1, &fb );
+
+       redraw();
+
+       if ( ok ) return 1;
+
+    }
+#endif
+
+    // No off screen rendering: save what the window shows, at its own size.
+
+    Draw();
+    glFinish();
+    WritePNG( &name[0], ( char * )"VSPVIEWER", 0, 0, pixel_w(), pixel_h(), 0 );
+    redraw();
+
+    return Width == pixel_w() && Height == pixel_h();
+
+}
+
+namespace {
+
+// The image size dialog: the width can be typed, the height follows the view's aspect ratio.
+struct ImageSizeDialog
+{
+    Fl_Int_Input *Width;
+    Fl_Int_Input *Height;
+    int WinW, WinH, MaxDim;
+    int Result;
+
+    int HeightFor( int w ) const
+    {
+       return std::max( 1, (int)( w * (double)WinH / WinW + 0.5 ) );
+    }
+
+    static void WidthChanged( Fl_Widget *, void *data )
+    {
+       ImageSizeDialog *d = ( ImageSizeDialog * )data;
+       int w = atoi( d->Width->value() );
+       char buf[32];
+       snprintf( buf, sizeof( buf ), "%d", w > 0 ? d->HeightFor( w ) : 0 );
+       d->Height->value( buf );
+    }
+
+    static void Ok( Fl_Widget *w, void *data )
+    {
+       ( ( ImageSizeDialog * )data )->Result = 1;
+       w->window()->hide();
+    }
+
+    static void Cancel( Fl_Widget *w, void *data )
+    {
+       ( ( ImageSizeDialog * )data )->Result = 0;
+       w->window()->hide();
+    }
+};
+
+}
+
+void GL_VIEWER::SaveImage(void)
+{
+
+    if ( pixel_w() <= 0 || pixel_h() <= 0 ) return;
+
+    ImageSizeDialog d;
+    d.WinW = pixel_w();
+    d.WinH = pixel_h();
+    d.MaxDim = MaxImageSize();
+    d.Result = 0;
+
+    int width = d.WinW;
+
+    // Ask until the size is one that can be made, or the user cancels.
+
+    while ( 1 ) {
+
+       Fl_Window dlg( 290, 150, "Save Image" );
+       dlg.set_modal();
+
+       d.Width = new Fl_Int_Input( 90, 15, 120, 28, "Width:" );
+       d.Height = new Fl_Int_Input( 90, 52, 120, 28, "Height:" );
+       new Fl_Box( 215, 15, 30, 28, "px" );
+       new Fl_Box( 215, 52, 30, 28, "px" );
+       Fl_Return_Button *ok = new Fl_Return_Button( 90, 105, 90, 30, "Next..." );
+       Fl_Button *cancel = new Fl_Button( 190, 105, 85, 30, "Cancel" );
+
+       d.Height->deactivate();
+       d.Width->when( FL_WHEN_CHANGED );
+       d.Width->callback( ImageSizeDialog::WidthChanged, &d );
+       ok->callback( ImageSizeDialog::Ok, &d );
+       cancel->callback( ImageSizeDialog::Cancel, &d );
+
+       char buf[32];
+       snprintf( buf, sizeof( buf ), "%d", width );
+       d.Width->value( buf );
+       ImageSizeDialog::WidthChanged( d.Width, &d );
+
+       dlg.end();
+       dlg.show();
+       d.Width->take_focus();
+       d.Width->insert_position( 0, d.Width->size() );
+
+       d.Result = 0;
+       while ( dlg.shown() ) Fl::wait();
+
+       if ( !d.Result ) return;
+
+       width = atoi( d.Width->value() );
+       int height = d.HeightFor( std::max( width, 1 ) );
+
+       if ( width < 16 || width > d.MaxDim || height > d.MaxDim ) {
+
+          fl_alert( "Width must be from 16 to %d pixels, with the height at most %d.",
+                    std::min( d.MaxDim, (int)( d.MaxDim * (double)d.WinW / d.WinH ) ), d.MaxDim );
+
+          width = std::max( 16, std::min( width, std::min( d.MaxDim, (int)( d.MaxDim * (double)d.WinW / d.WinH ) ) ) );
+          continue;
+
+       }
+
+       // Where to save it.
+
+       Fl_Native_File_Chooser fc;
+       fc.title( "Save Image" );
+       fc.type( Fl_Native_File_Chooser::BROWSE_SAVE_FILE );
+       fc.filter( "PNG Image\t*.png" );
+       fc.options( Fl_Native_File_Chooser::NEW_FOLDER | Fl_Native_File_Chooser::SAVEAS_CONFIRM | Fl_Native_File_Chooser::USE_FILTER_EXT );
+
+       std::string base( file_name );
+       std::string dir, stem( file_name_no_path );
+       size_t slash = base.find_last_of( "/\\" );
+       if ( slash != std::string::npos ) dir = base.substr( 0, slash );
+       if ( !dir.empty() ) fc.directory( dir.c_str() );
+       if ( stem.empty() ) stem = "vspaero";
+       fc.preset_file( ( stem + ".png" ).c_str() );
+
+       if ( fc.show() != 0 ) return;
+
+       std::string fn( fc.filename() );
+       if ( fn.empty() ) return;
+       std::string ext = fn.size() >= 4 ? fn.substr( fn.size() - 4 ) : std::string();
+       std::transform( ext.begin(), ext.end(), ext.begin(), ::tolower );
+       if ( ext != ".png" ) fn += ".png";
+
+       if ( !RenderToPNG( fn.c_str(), width, height ) ) {
+
+          fl_alert( "Could not render the image at %d x %d; it was saved at the window's size instead.", width, height );
+
+       }
+
+       return;
+
+    }
+
+}

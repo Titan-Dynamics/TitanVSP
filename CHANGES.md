@@ -93,6 +93,11 @@ rotates; right-drag or Alt+left-drag pans, with the model following the cursor; 
 Ctrl+left-drag or left+right-drag zooms; and the mouse wheel zooms about the point under the
 cursor.
 
+**File → SaveAs → PNG File** in the VSPAERO Viewer asks for the image width (the height follows
+the view's aspect ratio and is shown greyed out), then opens the Windows Save dialog. The image is
+rendered off screen at that size, so it can be larger than the window. It used to ask for a bare
+name and always save at the window's size next to the results.
+
 ## Perspective view
 
 **View → Perspective** (key **5**) switches every viewport between orthographic and perspective

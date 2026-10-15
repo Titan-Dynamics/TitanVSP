@@ -220,16 +220,7 @@ glviewer->redraw();}
         } {
           MenuItem FileMenuSaveAsTiff {
             label {PNG File}
-            callback {const char *val;
-char dum[80];
-sprintf(dum,"");
-val = fl_input("File Name:",dum);
-if ( val != NULL ) {
-
-sprintf(dum,"%s",val);
-glviewer->WritePNGFile(dum);
-
-}}
+            callback {glviewer->SaveImage();}
             xywh {15 15 100 20}
           }
           MenuItem FileMenuSaveAsMoviePNG {
