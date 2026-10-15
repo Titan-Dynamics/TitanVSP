@@ -1243,8 +1243,8 @@ string ScreenMgr::FileChooser( const string &title, const string &filter, int mo
     Fl_Preferences prefs( Fl_Preferences::USER, "openvsp.org", "VSP" );
     Fl_Preferences app( prefs, "Application" );
 
-    int fc_type = vsp::FC_OPENVSP;
-    app.get( "File_Chooser", fc_type, vsp::FC_OPENVSP );
+    int fc_type = vsp::FC_NATIVE;
+    app.get( "File_Chooser", fc_type, vsp::FC_NATIVE );
 
     if ( fc_type == vsp::FC_OPENVSP )
     {
