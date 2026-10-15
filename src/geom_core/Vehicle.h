@@ -261,6 +261,11 @@ public:
     // Return Mesh Geom ID if the export generates a mesh, otherwise return an
     // empty string. This facilitates deleting the generated mesh from the API.
     string ExportFile( const string & file_name, int write_set, int degen_set, int subsFlag, int file_type, bool useMode, const string &modeID );
+
+    // TitanVSP: set the STL export's tessellation on the Geoms in write_set, saving what each
+    // Parm was so RestoreExportTess can put it back.
+    void OverrideSTLTess( int write_set, bool useMode, vector< pair< Parm*, double > > & saved );
+    void RestoreExportTess( vector< pair< Parm*, double > > & saved );
     bool WriteXMLFile( const string & file_name, int set );
     void WriteXSecFile( const string & file_name, int write_set, bool useMode, const string& modeID );
     void WritePLOT3DFile( const string & file_name, int write_set, bool useMode, const string &modeID );
@@ -617,6 +622,14 @@ public:
 
     BoolParm m_STLMultiSolid;
     BoolParm m_STLExportPropMainSurf;
+
+    // TitanVSP: an STL export can use its own tessellation.  When m_STLResOverride is on, every
+    // Geom being exported takes these for the export, then gets its own back.
+    BoolParm m_STLResOverride;
+    IntParm m_STLTessU;         // Tess_U, for Geoms without sections (pods, fillets, ...).
+    IntParm m_STLSectTessU;     // SectTess_U of every section of wings, fuselages and stacks.
+    IntParm m_STLTessW;         // Tess_W.
+    IntParm m_STLCapTess;       // CapUMinTess, the end caps.
 
     BoolParm m_UseModeCompGeomFlag;
     BoolParm m_UseModeExportFlag;

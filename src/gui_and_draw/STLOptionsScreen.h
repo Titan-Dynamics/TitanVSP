@@ -44,6 +44,19 @@ protected:
     bool m_PrevMultiSolid;
     bool m_PrevPropExportOrigin;
 
+    // TitanVSP: the export's own resolution.
+    ToggleButton m_ResOverrideToggle;
+    SliderAdjRangeInput m_TessUSlider;
+    SliderAdjRangeInput m_SectTessUSlider;
+    SliderAdjRangeInput m_TessWSlider;
+    SliderAdjRangeInput m_CapTessSlider;
+
+    bool m_PrevResOverride;
+    int m_PrevTessU, m_PrevSectTessU, m_PrevTessW, m_PrevCapTess;
+
+    void SavePrev();
+    void RestorePrev();
+
     TriggerButton m_OkButton;
     TriggerButton m_CancelButton;
 

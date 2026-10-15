@@ -77,7 +77,7 @@ Vehicle::Vehicle()
     SetParmContainerType( vsp::ATTROBJ_VEH );
     AttachAttrCollection();
 
-    m_STEPLenUnit.Init( "LenUnit", "STEPSettings", this, vsp::LEN_FT, vsp::LEN_MM, vsp::LEN_YD );
+    m_STEPLenUnit.Init( "LenUnit", "STEPSettings", this, vsp::LEN_MM, vsp::LEN_MM, vsp::LEN_YD );
     m_STEPTol.Init( "Tolerance", "STEPSettings", this, 1e-6, 1e-12, 1e12 );
     m_STEPSplitSurfs.Init( "SplitSurfs", "STEPSettings", this, true, 0, 1 );
     m_STEPSplitSubSurfs.Init( "SplitSubSurfs", "STEPSettings", this, false, 0, 1 );
@@ -113,7 +113,7 @@ Vehicle::Vehicle()
     m_STEPStructureLabelAirfoilPart.Init( "StructureLabelAirfoilPart", "STEPSettings", this, true, 0, 1 );
     m_STEPStructureLabelDelim.Init( "StructureLabelDelim", "STEPSettings", this, vsp::DELIM_COMMA, vsp::DELIM_COMMA, vsp::DELIM_NUM_TYPES - 1 );
 
-    m_IGESLenUnit.Init( "LenUnit", "IGESSettings", this, vsp::LEN_FT, vsp::LEN_MM, vsp::LEN_FT );
+    m_IGESLenUnit.Init( "LenUnit", "IGESSettings", this, vsp::LEN_MM, vsp::LEN_MM, vsp::LEN_FT );
     m_IGESSplitSurfs.Init( "SplitSurfs", "IGESSettings", this, true, 0, 1 );
     m_IGESSplitSubSurfs.Init( "SplitSubSurfs", "IGESSettings", this, false, 0, 1 );
     m_IGESToCubic.Init( "ToCubic", "IGESSettings", this, false, 0, 1 );
@@ -259,6 +259,17 @@ Vehicle::Vehicle()
 
     m_STLMultiSolid.Init( "MultiSolid", "STLSettings", this, false, 0, 1 );
     m_STLExportPropMainSurf.Init( "ExportPropMainSurf", "STLSettings", this, false, 0, 1 );
+
+    m_STLResOverride.Init( "ResOverride", "STLSettings", this, false, 0, 1 );
+    m_STLResOverride.SetDescript( "Export the STL with the tessellation below instead of each Geom's own" );
+    m_STLTessU.Init( "TessU", "STLSettings", this, 16, 2, 1000 );
+    m_STLTessU.SetDescript( "Tess_U for Geoms without sections" );
+    m_STLSectTessU.Init( "SectTessU", "STLSettings", this, 12, 2, 1000 );
+    m_STLSectTessU.SetDescript( "Tessellation of every section of wings, fuselages and stacks" );
+    m_STLTessW.Init( "TessW", "STLSettings", this, 33, 2, 1001 );
+    m_STLTessW.SetDescript( "Tess_W for every Geom" );
+    m_STLCapTess.Init( "CapTess", "STLSettings", this, 5, 2, 51 );
+    m_STLCapTess.SetDescript( "Tessellation of end caps" );
 
     m_UpdatingBBox = false;
     m_BbXLen.Init( "X_Len", "BBox", this, 0, 0, 1e12 );
@@ -8118,6 +8129,84 @@ void Vehicle::SetApplyAbsIgnoreFlag( const vector< string > &g_vec, bool val )
 }
 
 //==== Import File Methods ====//
+//==== TitanVSP: STL export resolution ====//
+// Each Geom being exported takes the STL settings' tessellation: sections of wings, fuselages
+// and stacks their own U count, other Geoms Tess_U, and all of them Tess_W and the end caps'.
+// Every Parm changed is saved, with what it was, for RestoreExportTess.  With a mode, the mode
+// picks what is exported, so every Geom takes the override.
+void Vehicle::OverrideSTLTess( int write_set, bool useMode, vector< pair< Parm*, double > > & saved )
+{
+    saved.clear();
+
+    auto set = [ &saved ]( Parm & p, double val )
+    {
+        if ( p.Get() != val )
+        {
+            saved.push_back( make_pair( &p, p.Get() ) );
+            p.Set( val );
+        }
+    };
+
+    vector< Geom* > geom_vec = FindGeomVec( GetGeomVec() );
+    for ( Geom* g : geom_vec )
+    {
+        if ( !g || ( !useMode && !g->GetSetFlag( write_set ) ) )
+        {
+            continue;
+        }
+
+        int num_xsec_surf = g->GetNumXSecSurfs();
+        if ( num_xsec_surf > 0 )
+        {
+            for ( int j = 0; j < num_xsec_surf; j++ )
+            {
+                XSecSurf* xsecsurf = g->GetXSecSurf( j );
+                if ( !xsecsurf )
+                {
+                    continue;
+                }
+                for ( int k = 0; k < xsecsurf->NumXSec(); k++ )
+                {
+                    XSec* xs = xsecsurf->FindXSec( k );
+                    if ( xs )
+                    {
+                        set( xs->m_SectTessU, m_STLSectTessU() );
+                    }
+                }
+            }
+        }
+        else
+        {
+            set( g->m_TessU, m_STLTessU() );
+        }
+
+        set( g->m_TessW, m_STLTessW() );
+        set( g->m_CapUMinTess, m_STLCapTess() );
+    }
+
+    if ( !saved.empty() )
+    {
+        Update();
+    }
+}
+
+// Puts back every Parm OverrideSTLTess changed, last first, and rebuilds.
+void Vehicle::RestoreExportTess( vector< pair< Parm*, double > > & saved )
+{
+    if ( saved.empty() )
+    {
+        return;
+    }
+
+    for ( int i = ( int )saved.size() - 1; i >= 0; i-- )
+    {
+        saved[i].first->Set( saved[i].second );
+    }
+    saved.clear();
+
+    Update();
+}
+
 string Vehicle::ExportFile( const string & file_name, int write_set, int degen_set, int subsFlag, int file_type, bool useMode, const string &modeID )
 {
     string mesh_id = string();
@@ -8132,6 +8221,12 @@ string Vehicle::ExportFile( const string & file_name, int write_set, int degen_s
     }
     else if ( file_type == EXPORT_STL )
     {
+        vector< pair< Parm*, double > > saved_tess;
+        if ( m_STLResOverride() )
+        {
+            OverrideSTLTess( write_set, useMode, saved_tess );
+        }
+
         if ( m_STLExportPropMainSurf() )
         {
             SetExportPropMainSurf( true );
@@ -8150,6 +8245,8 @@ string Vehicle::ExportFile( const string & file_name, int write_set, int degen_s
         {
             SetExportPropMainSurf( false );
         }
+
+        RestoreExportTess( saved_tess );
     }
     else if ( file_type == EXPORT_CART3D )
     {
