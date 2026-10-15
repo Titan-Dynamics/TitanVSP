@@ -21,7 +21,8 @@ component, so OpenVSP models and scripts work as they are.
 
 | Release | What's in it |
 | --- | --- |
-| [v3.55.0-titan.2](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.2) | Everything on this page. |
+| [v3.55.0-titan.3](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.3) | Everything on this page. |
+| v3.55.0-titan.2 (withdrawn) | Everything except the VSPAERO results plot changes. It was replaced by titan.3. |
 | v3.55.0-titan.1 (withdrawn) | The Fillet component, the TitanVSP name, and the Windows build scripts. It was replaced by titan.2. |
 
 ## Fillet component
