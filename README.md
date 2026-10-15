@@ -143,7 +143,7 @@ both parts, and it leaves them untouched.
 | --- | --- | --- |
 | **Radius** | 0 (auto) | Radius of the rolling ball. At 0, the first build picks 8% of the wing's chord at the root, or 8% of the slimmer body's thickness for body joins, and fills it in. |
 | **Stations** | 41 (9–401) | Number of cross-sections round the junction. More are added automatically wherever the fillet turns quickly. |
-| **TE Taper** | 0.15 (0–1) | Wing roots only. The fraction of each side of the junction over which the radius tapers to nothing at the trailing edge. On body fillets it's 0 and greyed out. |
+| **TE Taper** | 0.75 (0–1) | Wing roots only. The fraction of each side of the junction over which the radius tapers to nothing at the trailing edge. On body fillets it's 0 and greyed out. |
 | **Sink** | 1.0 | How far the fillet's face carries on past where it touches each part, easing just under the surface, so it fades in instead of ending on a line. It's in model units and capped at 4 × Radius. |
 
 The Fillet rebuilds automatically whenever either part moves or changes. Its own position,

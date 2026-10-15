@@ -49,7 +49,7 @@ touching both parts.
   | --- | --- | --- |
   | `Radius` | 0 (auto) | Ball radius. At 0 the first build picks 8% of the wing's root chord, or 8% of the slimmer body's thickness, and fills it in. |
   | `NumStations` | 41 (9–401) | Cross-sections round the junction. More are added wherever the fillet turns quickly. |
-  | `TETaper` | 0.15 (0–1) | Wing roots only: the fraction of each side over which the radius tapers to nothing at the trailing edge. 0 and greyed out on body fillets. |
+  | `TETaper` | 0.75 (0–1) | Wing roots only: the fraction of each side over which the radius tapers to nothing at the trailing edge. 0 and greyed out on body fillets. |
   | `Sink` | 1.0 | How far the fillet's face carries on past each contact, easing under the surface, so it fades in instead of ending on a line. In model units, capped at 4 × Radius. |
 
 - **Status line.** The Fillet's **Design** tab says what it's blending into, or why it couldn't

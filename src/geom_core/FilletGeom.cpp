@@ -2024,7 +2024,7 @@ FilletGeom::FilletGeom( Vehicle* vehicle_ptr ) : Geom( vehicle_ptr )
     m_NumStations.Init( "NumStations", "Design", this, 41, 9, 401 );
     m_NumStations.SetDescript( "Number of cross-sections around the junction" );
 
-    m_TETaper.Init( "TETaper", "Design", this, 0.15, 0.0, 1.0 );
+    m_TETaper.Init( "TETaper", "Design", this, 0.75, 0.0, 1.0 );
     m_TETaper.SetDescript( "Fraction of the junction, from the TE, over which the radius tapers to nothing (wings only)" );
 
     m_Sink.Init( "Sink", "Design", this, 1.0, 0.0, 1.0e12 );
