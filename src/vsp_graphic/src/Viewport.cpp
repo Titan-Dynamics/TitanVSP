@@ -114,11 +114,11 @@ void Viewport::drawBorder( bool selected )
 
     if( selected )
     {
-        glColor3f( 1.0f, 0.0f, 0.0f );
+        glColor3f( 1.0f, 1.0f, 1.0f );
     }
     else
     {
-        glColor3f( 0.0f, 0.0f, 0.0f );
+        glColor3f( 0.33f, 0.33f, 0.33f );
     }
 
     glMatrixMode( GL_PROJECTION );

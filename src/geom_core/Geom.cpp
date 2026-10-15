@@ -4519,7 +4519,7 @@ void Geom::LoadDrawObjs( vector< DrawObj* > & draw_obj_vec )
     m_HighlightDrawObj.m_GeomID = BBOXHEADER + m_ID;
     m_HighlightDrawObj.m_Visible = isactive;
     m_HighlightDrawObj.m_LineWidth = 4.0;
-    m_HighlightDrawObj.m_LineColor = vec3d( 1.0, 0., 0.0 );
+    m_HighlightDrawObj.m_LineColor = vec3d( 1.0, 1.0, 1.0 );
     m_HighlightDrawObj.m_Type = DrawObj::VSP_LINES;
     draw_obj_vec.push_back( &m_HighlightDrawObj );
 
@@ -6677,16 +6677,16 @@ void Geom::RecolorSubSurfs( int active_ind )
         {
             if ( i == active_ind )
             {
-                m_SubSurfVec[i]->SetLineColor( vec3d( 1, 0, 0 ) );
+                m_SubSurfVec[i]->SetLineColor( vec3d( 1, 1, 1 ) );
             }
             else
             {
-                m_SubSurfVec[i]->SetLineColor( vec3d( 0, 0, 0 ) );
+                m_SubSurfVec[i]->SetLineColor( vec3d( 170, 170, 170 ) / 255.0 );
             }
         }
         else
         {
-            m_SubSurfVec[i]->SetLineColor( vec3d( 0, 0, 0 ) );
+            m_SubSurfVec[i]->SetLineColor( vec3d( 170, 170, 170 ) / 255.0 );
         }
     }
 }
@@ -7987,7 +7987,7 @@ void GeomXSec::LoadDrawObjs( vector< DrawObj* > & draw_obj_vec )
         m_XSecDrawObj_vec[i].m_GeomID = XSECHEADER + m_ID + str;
         m_XSecDrawObj_vec[i].m_Visible = isshown && isactive && m_GuiDraw.GetDisplayType() == DISPLAY_TYPE::DISPLAY_BEZIER;
         m_XSecDrawObj_vec[i].m_LineWidth = 2.0;
-        m_XSecDrawObj_vec[i].m_LineColor = vec3d( 0.0, 0.0, 0.0 );
+        m_XSecDrawObj_vec[i].m_LineColor = vec3d( 170.0, 170.0, 170.0 ) / 255.0;
         m_XSecDrawObj_vec[i].m_Type = DrawObj::VSP_LINE_STRIP;
         draw_obj_vec.push_back( &m_XSecDrawObj_vec[i] );
     }
@@ -7996,7 +7996,7 @@ void GeomXSec::LoadDrawObjs( vector< DrawObj* > & draw_obj_vec )
     m_HighlightXSecDrawObj.m_GeomID = XSECHEADER + m_ID + "ACTIVE";
     m_HighlightXSecDrawObj.m_Visible = isshown && isactive && m_GuiDraw.GetDisplayType() == DISPLAY_TYPE::DISPLAY_BEZIER;
     m_HighlightXSecDrawObj.m_LineWidth = 4.0;
-    m_HighlightXSecDrawObj.m_LineColor = vec3d( 0.0, 0.0, 1.0 );
+    m_HighlightXSecDrawObj.m_LineColor = vec3d( 1.0, 1.0, 1.0 );
     m_HighlightXSecDrawObj.m_Type = DrawObj::VSP_LINE_STRIP;
     draw_obj_vec.push_back( &m_HighlightXSecDrawObj );
 

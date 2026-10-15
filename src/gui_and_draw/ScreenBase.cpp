@@ -7156,7 +7156,7 @@ void XSecViewScreen::GuiDeviceCallBack( GuiDevice* device )
         xsc->SetImageFile( "" );
         xsc->m_XSecImagePreserveAR.Set( true );
 
-        veh->SetXSecLineColor( vec3d( 0, 0, 0 ) );
+        veh->SetXSecLineColor( vec3d( 255, 255, 255 ) );
 
         // Reset Scale & Offset
         xsc->m_XSecImageW.Set( viewport->getBackground()->getScaleW() );

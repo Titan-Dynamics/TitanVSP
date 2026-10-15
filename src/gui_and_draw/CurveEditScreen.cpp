@@ -1108,7 +1108,7 @@ void CurveEditScreen::GuiDeviceCallBack( GuiDevice* gui_device )
             edit_curve_xs->SetImageFile( "" );
             edit_curve_xs->m_XSecImagePreserveAR.Set( true );
 
-            veh->SetXSecLineColor( vec3d( 0, 0, 0 ) );
+            veh->SetXSecLineColor( vec3d( 255, 255, 255 ) );
 
             // Reset Scale & Offset
             edit_curve_xs->m_XSecImageW.Set( viewport->getBackground()->getScaleW() );

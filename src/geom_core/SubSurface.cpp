@@ -34,7 +34,7 @@ SubSurface::SubSurface( const string& compID, int type )
     AttachAttrCollection();
     m_CompID = compID;
     m_Tag = 0;
-    m_LineColor = vec3d( 0, 0, 0 );
+    m_LineColor = vec3d( 170, 170, 170 ) / 255.0;
     m_PolyPntsReadyFlag = false;
     m_FirstSplit = true;
     m_PolyFlag = true;

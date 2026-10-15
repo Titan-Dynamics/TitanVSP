@@ -47,7 +47,7 @@ void PickableGeom::_draw()
         {
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-            glColor3f(1.0f, 0.0f, 0.0f);
+            glColor3f(1.0f, 1.0f, 1.0f);
 
             eBuffer->bind();
             vBuffer->drawElem(GL_QUADS, eBuffer->getElemSize(), (void*)0);

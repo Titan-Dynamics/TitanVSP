@@ -359,6 +359,7 @@ Vehicle::Vehicle()
     SetupPaths();
     m_VehProjectVec3d.resize( 3 );
     m_ColorCount = 0;
+    m_XSecLineColor = vec3d( 255, 255, 255 );
 
     m_ViewDirty = true;
 
@@ -684,7 +685,7 @@ void Vehicle::Wype()
     // only matters for looking the way a new Vehicle does.
     m_ColorCount = 0;
 
-    m_XSecLineColor = vec3d();
+    m_XSecLineColor = vec3d( 255, 255, 255 );
 
     for ( auto it = m_GeomStoreMap.begin(); it != m_GeomStoreMap.end(); ++it )
     {
