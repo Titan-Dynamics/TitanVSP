@@ -22,6 +22,7 @@ Display::Display()
     _screenSizeDiffRatio = 1.0;
 
     _showLogo = false;
+    _lineSmooth = false;
     _logoTried = false;
     _logoTex = 0;
     _logoW = _logoH = 0;
@@ -133,6 +134,7 @@ void Display::draw( Scene * scene, int x, int y )
     }
     _currLayout->setLogo( _showLogo ? _logoTex : 0, _logoW, _logoH );
     _currLayout->setSceneOverlay( _sceneOverlay );
+    _currLayout->setLineSmooth( _lineSmooth );
 
     _currLayout->draw( scene, x, y );
 }

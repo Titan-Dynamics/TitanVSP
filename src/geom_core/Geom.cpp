@@ -3323,7 +3323,7 @@ void Geom::UpdateDrawObj()
             m_FeatureDrawObj_vec.resize( 1 );
         }
         m_FeatureDrawObj_vec[0].m_GeomChanged = true;
-        m_FeatureDrawObj_vec[0].m_LineWidth = 1.0;
+        m_FeatureDrawObj_vec[0].m_LineWidth = 2.0;   // TitanVSP: was 1, too fine to read.
         m_FeatureDrawObj_vec[0].m_LineColor = vec3d( 0.0, 0.0, 0.0 );
         m_FeatureDrawObj_vec[0].m_Screen = DrawObj::VSP_MAIN_SCREEN;
         m_FeatureDrawObj_vec[0].m_GeomID = m_ID + "Feature_0";

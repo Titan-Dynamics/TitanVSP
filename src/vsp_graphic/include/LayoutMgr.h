@@ -126,6 +126,11 @@ public:
     * Called for each viewport right after its scene is drawn, with its camera bound and its depth
     * buffer as the scene left it -- before the corner axes clear it (TitanVSP).
     */
+    void setLineSmooth( bool smooth )
+    {
+        _lineSmooth = smooth;
+    }
+
     void setSceneOverlay( std::function< void( Viewport * ) > overlay )
     {
         _sceneOverlay = overlay;
@@ -145,6 +150,7 @@ protected:
     int _logoW, _logoH;
 
     std::function< void( Viewport * ) > _sceneOverlay;
+    bool _lineSmooth;
 
 private:
     int _row;

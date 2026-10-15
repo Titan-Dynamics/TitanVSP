@@ -119,6 +119,8 @@ protected:
     VSPCheckMenuItem m_AxisMenuItem;
     VSPCheckMenuItem m_BorderMenuItem;
     VSPCheckMenuItem m_PerspectiveMenuItem;
+    VSPCheckMenuItem m_GridMenuItem;
+    VSPCheckMenuItem m_AntialiasMenuItem;
 
     ActionMenuItem m_TopMenuItem;
     ActionMenuItem m_FrontMenuItem;

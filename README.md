@@ -221,6 +221,10 @@ Click a component in the 3D view to select it; **Shift**+click adds it to the se
 it out, and clicking empty space clears the selection. Dragging still turns the view. Blanks show
 as small balls, ringed when selected; click one to select it.
 
+With components selected and the mouse over the 3D view, type **G** (move) or **R** (rotate),
+then **X**, **Y** or **Z**, then a number, then **Enter**: `G X 12` moves 12 units along X, `R X 45`
+rotates 45° about X. **Esc** cancels.
+
 Select a component and move arrows appear at its origin, as in Blender: red X, green Y, blue Z.
 Drag an arrow to move the component along that axis; it moves in whole units. With several
 components selected, they all move together. An axis pointing straight at you is hidden, so turn
@@ -228,9 +232,13 @@ the view to move along it.
 
 ### Perspective view
 
+**View → Grid** shows a ground grid on the XY plane that fades out around the model, with the X
+and Y axes in red and green. **View → Anti-aliasing** smooths the lines in the 3D view.
+
 **View → Perspective** (key **5**) switches the 3D view between orthographic and perspective,
-keeping the same framing. The view starts in perspective, and each model remembers which mode it
-was saved in.
+keeping the same framing.
+
+All three are on for new models, and each model saves its own settings.
 
 ### Windows file dialogs
 

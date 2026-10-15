@@ -26,6 +26,7 @@ LayoutMgr::LayoutMgr( int row, int column )
     _startx = _starty = -1;
 
     _logoTex = 0;
+    _lineSmooth = false;
     _logoW = _logoH = 0;
 
     std::vector < Common::VSPenum > vOrder;
@@ -139,6 +140,7 @@ void LayoutMgr::predraw( Scene * scene, int x, int y )
 
         glDisable( GL_BLEND );
         glDisable( GL_MULTISAMPLE );
+        glDisable( GL_LINE_SMOOTH );  // Pick colours must stay exact.
 
         scene->predraw();
 
@@ -193,6 +195,19 @@ void LayoutMgr::draw( Scene * scene, int x, int y )
 
         glEnable( GL_MULTISAMPLE );
 
+        // TitanVSP: smooth lines when asked (View > Anti-aliasing).  Multisampling isn't always
+        // granted, and wireframes then come out jagged; blending is on, so smoothed lines fade
+        // into what's behind them.
+        if ( _lineSmooth )
+        {
+            glEnable( GL_LINE_SMOOTH );
+            glHint( GL_LINE_SMOOTH_HINT, GL_NICEST );
+        }
+        else
+        {
+            glDisable( GL_LINE_SMOOTH );
+        }
+
         glShadeModel( GL_SMOOTH );
 
         // Draw Background
@@ -245,6 +260,7 @@ void LayoutMgr::draw( Scene * scene, int x, int y )
         glDisable( GL_BLEND );
         glDisable( GL_ALPHA_TEST );
         glDisable( GL_DEPTH_TEST );
+        glDisable( GL_LINE_SMOOTH );
         glDepthMask( GL_FALSE );
 
         _viewportList[i]->unbind();

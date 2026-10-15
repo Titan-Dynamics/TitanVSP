@@ -26,7 +26,8 @@ length unit. Models keep whatever they were saved with.
 
 | Release | What's in it |
 | --- | --- |
-| [v3.55.0-titan.7](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.7) | Everything on this page. The zip includes this file, `CHANGES.md`. |
+| Not yet released (`main`) | Keyboard move and rotate (G / R), the ground grid, the anti-aliasing switch, the thicker outline, and the 3D view settings (perspective, grid, anti-aliasing) on by default and saved with each model. |
+| [v3.55.0-titan.7](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.7) | Everything else on this page. The zip includes this file, `CHANGES.md`. |
 | v3.55.0-titan.6 (withdrawn) | titan.7 without `CHANGES.md` in the zip. Replaced by titan.7. |
 | v3.55.0-titan.5 (withdrawn) | titan.6 without perspective by default, saved with each model. Replaced by titan.6. |
 | v3.55.0-titan.4 (withdrawn) | titan.5 without the move arrows, click-to-select, Blanks drawn as balls, and the brighter selection with thinner selection boxes. Replaced by titan.5. |
@@ -100,6 +101,22 @@ The VSPAERO Viewer has its own dark theme; see [VSPAERO Viewer](#vspaero-viewer)
 
 ## 3D view
 
+**Ground grid.** **View → Grid** shows a grid on the XY plane (z = 0), centred under every
+component in the model, shown or hidden. It looks endless: solid near the model, fading out slowly
+to nothing at 110% of the model's largest dimension from its middle. Lines are on whole multiples of
+a round spacing (1, 2 or 5 times a power of ten) that gives about twenty cells across the model,
+with every fifth line brighter and the X and Y axes in red and green. Parts in front of the grid
+hide it.
+
+**Anti-aliasing.** **View → Anti-aliasing** smooths the lines in the 3D view, for setups where
+multisampling isn't available and wireframes come out jagged. The black outline drawn along a
+component's edges is 2 px instead of 1.
+
+**Saved per model.** Perspective, Grid and Anti-aliasing are all on for new models (and for files
+saved before they existed), and each model saves its own settings, so a file reopens the way it
+was left. They're the Vehicle's `Perspective`, `Grid` and `Antialias` settings, in the
+`ViewSettings` group.
+
 **Click to select.** Clicking a component in the 3D view selects it, as if picked in the Geom
 Browser, and opens its window. **Shift**+click adds it to the selection, or takes it out; clicking
 empty space clears the selection. A click is a press and release that hardly moves, so dragging
@@ -111,6 +128,19 @@ small shaded ball at its origin (and at each symmetric copy), half transparent a
 screen whatever the zoom or window, with a white ring round it when selected. Clicking the ball
 selects the Blank. Parts in front of a Blank hide its ball, as they hide each other. The Geom
 Browser's **Pick** mode still picks Blanks by their (now invisible) triad.
+
+**Keyboard move and rotate.** As in Blender, with components selected and the mouse over the 3D
+view: **G** (move) or **R** (rotate), then **X**, **Y** or **Z**, then a number, then **Enter**.
+`G X 12` moves the selection 12 units along X; `R X 45` rotates it 45° about X. Choosing an axis
+draws it as a line through the selection in its colour, a prompt in the top-left corner shows
+what's being typed, and the change previews as you type (`-` flips the sign, Backspace deletes).
+**Enter** or a left click applies it; **Esc** or a right click cancels. Without an axis nothing
+changes. Pressing **G** or **R** again switches between move and rotate. A move is along the
+model's axis, as with the move arrows; a rotation adds to that axis's rotation (X/Y/Z Rotation,
+or Rel Rotation for a component placed relative to its parent). One undo puts it back. With nothing
+selected, **R** still sets the rotation center (View → Set Rotation Center). **View → View Front Of** no longer has
+the **X** shortcut, which belongs to the move and rotate; it's still in the View menu. Two dim lines in the bottom-left corner of the 3D view spell out the
+G and R shortcuts.
 
 **Move arrows.** Selecting components shows Blender-style move arrows at their origin: red X, green
 Y and blue Z, at a fixed size on screen, drawn over the model. Drag an arrow with the left mouse
@@ -126,9 +156,8 @@ each location value the drag changed), and the arrows show only in the main 3D v
 framing, so rotate, pan and zoom carry over and switching back and forth doesn't jump. The screen
 grid, rulers, probes and picking work the same in both modes.
 
-The view starts in perspective, and the choice is saved with the model: each file reopens in the
-mode it was saved in, and new models and files saved before this start in perspective (the
-Vehicle's `Perspective` setting, in the `ViewSettings` group).
+The view starts in perspective; each model saves the mode it was left in (see *Saved per model*
+above).
 
 ## Windows file dialogs
 

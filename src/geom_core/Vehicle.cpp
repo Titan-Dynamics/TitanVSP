@@ -263,6 +263,12 @@ Vehicle::Vehicle()
     m_ViewPerspective.Init( "Perspective", "ViewSettings", this, true, 0, 1 );
     m_ViewPerspective.SetDescript( "Show the main 3D view in perspective instead of orthographic" );
 
+    m_ViewGrid.Init( "Grid", "ViewSettings", this, true, 0, 1 );
+    m_ViewGrid.SetDescript( "Show a grid on the XY plane under the model, fading out at 110% of its size" );
+
+    m_ViewAntialias.Init( "Antialias", "ViewSettings", this, true, 0, 1 );
+    m_ViewAntialias.SetDescript( "Smooth the lines in the main 3D view" );
+
     m_STLResOverride.Init( "ResOverride", "STLSettings", this, false, 0, 1 );
     m_STLResOverride.SetDescript( "Export the STL with the tessellation below instead of each Geom's own" );
     m_STLTessU.Init( "TessU", "STLSettings", this, 16, 2, 1000 );

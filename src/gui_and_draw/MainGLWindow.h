@@ -220,6 +220,33 @@ private:
     // screen -- with a ring round it when it's selected.  BlankHit finds the Blank whose ball is
     // under ( x, y ), for clicking.
     void BlankDraw( VSPGraphic::Viewport * vp );
+
+    //==== TitanVSP: ground grid ====//
+    // A grid on the XY plane under the model, fading out at 110% of the model's size.
+    void GridDraw( VSPGraphic::Viewport * vp );
+
+    //==== TitanVSP: keyboard move and rotate ====//
+    // As in Blender: G (move) or R (rotate), then X, Y or Z, then a number, then Enter.  The axis
+    // is drawn as a line through the selection, and the change previews as it's typed.  Esc or a
+    // right click cancels; Enter or a left click applies.  No axis, no change.
+    enum { XF_NONE, XF_MOVE, XF_ROTATE };
+    bool XfKey();
+    void XfBegin( int mode );
+    void XfApply( bool record );
+    void XfRestore();
+    void XfEnd( bool confirm );
+    void XfDraw();
+    void XfHintDraw();      // The G/R shortcuts, spelled out in the bottom left corner.
+
+    int m_XfMode;
+    int m_XfAxis;
+    string m_XfText;
+    bool m_XfSwallowKeyUp;
+    vector< string > m_XfGeoms;
+    vector< bool > m_XfRel;
+    vector< vec3d > m_XfStartLoc;
+    vector< vec3d > m_XfStartRot;
+    vector< Matrix4d > m_XfAttachInv;
     string BlankHit( int x, int y );
     bool m_ClickCandidate;
     int m_ClickX, m_ClickY;

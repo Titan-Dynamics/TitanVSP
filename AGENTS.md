@@ -247,6 +247,41 @@ object ID, less the suffix after the last `_`, is the component's ID (as in `_se
 Pick mode then goes off again and the scene is rebuilt without the pickables, so dragging still
 rotates and nothing highlights on hover. `ManageGeomScreen::SetSelection` applies the result.
 
+## Keyboard move and rotate
+
+`VspGlWindow::Xf*` (`MainGLWindow.cpp`), main window only. `handle()` offers `FL_KEYDOWN`, and
+`FL_SHORTCUT` with the mouse inside the window, to `XfKey` first. G/R start `XfBegin` when
+`GizmoGeoms()` (selected, location settable) isn't empty, recording each component's start
+location and rotation (Rel or Abs, matching its mode) and taking keyboard focus. While active,
+every key is consumed: X/Y/Z set the axis, digits/`.`/`-`/Backspace edit `m_XfText`, Enter
+applies, Esc cancels; key-ups are swallowed too, including the cancelling Esc, which
+`OnKeyup` would otherwise use to clear the selection. A mouse press applies (left) or cancels.
+`XfApply` previews with `SetFromDevice( val, true )` (no undo); `XfEnd` restores the start values
+without undo, then applies the final value with `drag_flag` false so undo returns to the start.
+Moves go along the model axis (Rel components through the inverse attach rotation, as the
+gizmo); rotations add to that axis's X/Y/Z Rot or RelRot. `XfDraw` draws the axis line from
+`GizmoGetFrame` and a `gl_draw` prompt; `<FL/gl.h>` must be included after GLEW.
+
+## Ground grid
+
+`VspGlWindow::GridDraw` (`MainGLWindow.cpp`), called from the same scene-overlay hook as
+`BlankDraw`, before it. It draws world-space lines on z = 0 with the viewport camera's projection
+and model-view matrices, depth-tested without depth writes, so the model occludes it. It's
+centred on the union of `GetBndBox()` over all Geoms (hidden included); with size the largest box
+dimension, lines are drawn inside a circle of radius 1.1 × size, in short pieces with per-vertex
+alpha that is full within 0.25 × size and smoothsteps to zero at 1.1 × size. The spacing is a
+1/2/5 × 10^n step giving about twenty cells across the model. `Vehicle::m_ViewGrid` switches it,
+from View → Grid in `MainVSPScreen`.
+
+**Line smoothing:** View → Anti-aliasing sets `Vehicle::m_ViewAntialias`; `MainVSPScreen::Update`
+passes it to `Display::setLineSmooth`, which hands it to `LayoutMgr`. `LayoutMgr::draw` then enables
+`GL_LINE_SMOOTH` for the scene pass (multisampling isn't always granted), and `predraw` always
+disables it so pick colours stay exact.
+
+**View settings:** `m_ViewPerspective`, `m_ViewGrid` and `m_ViewAntialias` are Vehicle BoolParms in
+`ViewSettings`, all default on, saved in the `.vsp3`. Feature lines
+(`m_FeatureDrawObj_vec`, the black edge outline) are 2 px.
+
 ## Blanks as balls
 
 `VspGlWindow::BlankDraw` draws every shown `BLANK_GEOM_TYPE` component as a half-transparent shaded

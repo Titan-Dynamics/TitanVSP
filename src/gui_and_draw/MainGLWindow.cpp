@@ -61,6 +61,7 @@
 #include "WaveDragScreen.h"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <FL/gl.h>      // gl_draw, for the move/rotate prompt.  After GLEW.
 
 #pragma warning(disable:4244)
 
@@ -85,10 +86,18 @@ VspGlWindow::VspGlWindow( int x, int y, int w, int h, ScreenMgr * mgr, DrawObj::
     m_ClickCandidate = false;
     m_ClickX = m_ClickY = 0;
 
+    m_XfMode = XF_NONE;
+    m_XfAxis = -1;
+    m_XfSwallowKeyUp = false;
+
     // Blanks are drawn in each viewport right after its scene, so parts in front hide them.
     if ( m_LinkedScreen == DrawObj::VSP_MAIN_SCREEN )
     {
-        m_GEngine->getDisplay()->setSceneOverlay( [this]( VSPGraphic::Viewport * vp ) { BlankDraw( vp ); } );
+        m_GEngine->getDisplay()->setSceneOverlay( [this]( VSPGraphic::Viewport * vp )
+        {
+            GridDraw( vp );
+            BlankDraw( vp );
+        } );
     }
     m_GizmoPx = 1.0f;
     m_GizmoSteps = 0;
@@ -200,6 +209,8 @@ void VspGlWindow::draw()
     m_GEngine->draw( m_mouse_x, m_mouse_y );
 
     GizmoDraw();
+    XfDraw();
+    XfHintDraw();
 }
 
 int VspGlWindow::handle( int fl_event )
@@ -229,6 +240,12 @@ int VspGlWindow::handle( int fl_event )
 
     case FL_PUSH:
         m_ClickCandidate = false;
+        if ( m_XfMode != XF_NONE )
+        {
+            // While typing a move or rotate: left click applies it, any other button cancels.
+            XfEnd( Fl::event_button() == FL_LEFT_MOUSE );
+            return 1;
+        }
         if ( GizmoPush( x, y ) )
         {
             return 1;
@@ -288,9 +305,31 @@ int VspGlWindow::handle( int fl_event )
         return 1;
 
     case FL_KEYDOWN:
+        if ( XfKey() )
+        {
+            return 1;
+        }
         return OnKeydown();
 
+    case FL_SHORTCUT:
+        // G or R with the mouse over the view, even when another widget has the keyboard.
+        if ( ( m_XfMode != XF_NONE || Fl::event_inside( this ) ) && XfKey() )
+        {
+            return 1;
+        }
+        break;
+
     case FL_KEYUP:
+        if ( m_XfMode != XF_NONE || m_XfSwallowKeyUp )
+        {
+            // The keys belong to the move or rotate, including the Esc that cancelled it, which
+            // would otherwise clear the selection.
+            if ( m_XfMode == XF_NONE )
+            {
+                m_XfSwallowKeyUp = false;
+            }
+            return 1;
+        }
         return OnKeyup( x, y );
 
     case FL_FOCUS:
@@ -3236,6 +3275,554 @@ void VspGlWindow::GizmoDraw()
         glVertex2f( f.m_Origin.x + 5.0f * ppu * std::cos( t ), f.m_Origin.y + 5.0f * ppu * std::sin( t ) );
     }
     glEnd();
+
+    glMatrixMode( GL_PROJECTION );
+    glPopMatrix();
+    glMatrixMode( GL_MODELVIEW );
+    glPopMatrix();
+    glPopAttrib();
+
+    glUseProgram( program );
+}
+
+//==== TitanVSP: keyboard move and rotate ====//
+
+// Handles a key for the move/rotate.  Returns true if it was used.
+bool VspGlWindow::XfKey()
+{
+    if ( m_LinkedScreen != DrawObj::VSP_MAIN_SCREEN || !m_GEngine )
+    {
+        return false;
+    }
+
+    int key = Fl::event_key();
+    const char * text = Fl::event_text();
+    char ch = ( text && text[0] ) ? text[0] : 0;
+    bool mods = Fl::event_state( FL_CTRL | FL_ALT | FL_META ) != 0;
+
+    if ( m_XfMode == XF_NONE )
+    {
+        if ( mods || m_GizmoAxis >= 0 || m_GEngine->getScene()->isPickingEnabled() || GizmoGeoms().empty() )
+        {
+            return false;
+        }
+        if ( key == 'g' )
+        {
+            XfBegin( XF_MOVE );
+            return true;
+        }
+        if ( key == 'r' )
+        {
+            XfBegin( XF_ROTATE );
+            return true;
+        }
+        return false;
+    }
+
+    if ( key == FL_Escape )
+    {
+        XfEnd( false );
+        m_XfSwallowKeyUp = true;
+        return true;
+    }
+    if ( key == FL_Enter || key == FL_KP_Enter )
+    {
+        XfEnd( true );
+        m_XfSwallowKeyUp = true;
+        return true;
+    }
+    if ( key == 'g' || key == 'r' )
+    {
+        int mode = key == 'g' ? XF_MOVE : XF_ROTATE;
+        if ( mode != m_XfMode )
+        {
+            XfRestore();
+            XfBegin( mode );
+        }
+        return true;
+    }
+    if ( key == 'x' || key == 'y' || key == 'z' )
+    {
+        if ( m_XfAxis >= 0 )
+        {
+            XfRestore();
+        }
+        m_XfAxis = key - 'x';
+        XfApply( false );
+        redraw();
+        return true;
+    }
+    if ( key == FL_BackSpace )
+    {
+        if ( !m_XfText.empty() )
+        {
+            m_XfText.pop_back();
+            XfApply( false );
+            redraw();
+        }
+        return true;
+    }
+    // The number, once there's an axis to apply it along.
+    if ( m_XfAxis >= 0 && ch )
+    {
+        if ( ch >= '0' && ch <= '9' )
+        {
+            m_XfText += ch;
+        }
+        else if ( ch == '.' && m_XfText.find( '.' ) == string::npos )
+        {
+            m_XfText += ch;
+        }
+        else if ( ch == '-' )
+        {
+            if ( !m_XfText.empty() && m_XfText[0] == '-' )
+            {
+                m_XfText.erase( 0, 1 );
+            }
+            else
+            {
+                m_XfText.insert( 0, 1, '-' );
+            }
+        }
+        XfApply( false );
+        redraw();
+    }
+    // Every other key is swallowed while typing, so it can't trigger a shortcut half way.
+    return true;
+}
+
+// Starts a move or rotate of the selected components, remembering where each one is.
+void VspGlWindow::XfBegin( int mode )
+{
+    m_XfMode = mode;
+    m_XfAxis = -1;
+    m_XfText.clear();
+    m_XfGeoms.clear();
+    m_XfRel.clear();
+    m_XfStartLoc.clear();
+    m_XfStartRot.clear();
+    m_XfAttachInv.clear();
+
+    for ( Geom * g : GizmoGeoms() )
+    {
+        bool rel = g->m_AbsRelFlag() == vsp::REL;
+        m_XfGeoms.push_back( g->GetID() );
+        m_XfRel.push_back( rel );
+        if ( rel )
+        {
+            m_XfStartLoc.push_back( vec3d( g->m_XRelLoc(), g->m_YRelLoc(), g->m_ZRelLoc() ) );
+            m_XfStartRot.push_back( vec3d( g->m_XRelRot(), g->m_YRelRot(), g->m_ZRelRot() ) );
+        }
+        else
+        {
+            m_XfStartLoc.push_back( vec3d( g->m_XLoc(), g->m_YLoc(), g->m_ZLoc() ) );
+            m_XfStartRot.push_back( vec3d( g->m_XRot(), g->m_YRot(), g->m_ZRot() ) );
+        }
+        Matrix4d inv = g->getAttachMatrix();
+        inv.affineInverse();
+        m_XfAttachInv.push_back( inv );
+    }
+
+    // Take the keyboard, so the number goes here and not into a field elsewhere.
+    Fl::focus( this );
+    redraw();
+}
+
+// Sets the components to their start plus the typed amount along the axis.  A move is along the
+// model's axis: a component placed relative to its parent takes it through the parent's
+// attachment rotation, as the move arrows do.  A rotation adds to that axis's rotation.  When
+// record is set the change goes on the undo stack; previews don't.
+void VspGlWindow::XfApply( bool record )
+{
+    Vehicle * veh = VehicleMgr.GetVehicle();
+    if ( !veh || m_XfAxis < 0 )
+    {
+        return;
+    }
+
+    double val = 0.0;
+    if ( !m_XfText.empty() && m_XfText != "-" && m_XfText != "." && m_XfText != "-." )
+    {
+        val = atof( m_XfText.c_str() );
+    }
+
+    bool drag = !record;
+    for ( int i = 0; i < ( int )m_XfGeoms.size(); i++ )
+    {
+        Geom * g = veh->FindGeom( m_XfGeoms[i] );
+        if ( !g )
+        {
+            continue;
+        }
+        bool rel = m_XfRel[i];
+        if ( m_XfMode == XF_MOVE )
+        {
+            vec3d move;
+            move[ m_XfAxis ] = val;
+            vec3d loc = m_XfStartLoc[i] + ( rel ? m_XfAttachInv[i].xformnorm( move ) : move );
+            Parm * p[3] = { &g->m_XLoc, &g->m_YLoc, &g->m_ZLoc };
+            if ( rel )
+            {
+                p[0] = &g->m_XRelLoc;
+                p[1] = &g->m_YRelLoc;
+                p[2] = &g->m_ZRelLoc;
+            }
+            for ( int k = 0; k < 3; k++ )
+            {
+                p[k]->SetFromDevice( loc[k], drag );
+            }
+        }
+        else
+        {
+            Parm * p[3] = { &g->m_XRot, &g->m_YRot, &g->m_ZRot };
+            if ( rel )
+            {
+                p[0] = &g->m_XRelRot;
+                p[1] = &g->m_YRelRot;
+                p[2] = &g->m_ZRelRot;
+            }
+            p[ m_XfAxis ]->SetFromDevice( m_XfStartRot[i][ m_XfAxis ] + val, drag );
+        }
+    }
+    m_ScreenMgr->SetUpdateFlag( true );
+}
+
+// Puts every component back where the move or rotate found it, without touching undo.
+void VspGlWindow::XfRestore()
+{
+    Vehicle * veh = VehicleMgr.GetVehicle();
+    if ( !veh )
+    {
+        return;
+    }
+    for ( int i = 0; i < ( int )m_XfGeoms.size(); i++ )
+    {
+        Geom * g = veh->FindGeom( m_XfGeoms[i] );
+        if ( !g )
+        {
+            continue;
+        }
+        bool rel = m_XfRel[i];
+        Parm * loc[3] = { &g->m_XLoc, &g->m_YLoc, &g->m_ZLoc };
+        Parm * rot[3] = { &g->m_XRot, &g->m_YRot, &g->m_ZRot };
+        if ( rel )
+        {
+            loc[0] = &g->m_XRelLoc; loc[1] = &g->m_YRelLoc; loc[2] = &g->m_ZRelLoc;
+            rot[0] = &g->m_XRelRot; rot[1] = &g->m_YRelRot; rot[2] = &g->m_ZRelRot;
+        }
+        for ( int k = 0; k < 3; k++ )
+        {
+            loc[k]->SetFromDevice( m_XfStartLoc[i][k], true );
+            rot[k]->SetFromDevice( m_XfStartRot[i][k], true );
+        }
+    }
+    m_ScreenMgr->SetUpdateFlag( true );
+}
+
+// Applies (from the start, so undo returns to it) or cancels the move or rotate.
+void VspGlWindow::XfEnd( bool confirm )
+{
+    XfRestore();
+    if ( confirm && m_XfAxis >= 0 && !m_XfText.empty() )
+    {
+        XfApply( true );
+    }
+    m_XfMode = XF_NONE;
+    m_XfAxis = -1;
+    m_XfText.clear();
+    m_XfGeoms.clear();
+    m_XfRel.clear();
+    m_XfStartLoc.clear();
+    m_XfStartRot.clear();
+    m_XfAttachInv.clear();
+    m_ScreenMgr->SetUpdateFlag( true );
+    redraw();
+}
+
+// The chosen axis as a line through the selection, in its axis colour, and what's being typed in
+// the top left corner.
+void VspGlWindow::XfDraw()
+{
+    if ( m_XfMode == XF_NONE )
+    {
+        return;
+    }
+
+    float ppu = pixels_per_unit();
+
+    GLint program = 0;
+    glGetIntegerv( GL_CURRENT_PROGRAM, &program );
+    glUseProgram( 0 );
+
+    glPushAttrib( GL_ALL_ATTRIB_BITS );
+    glDisable( GL_SCISSOR_TEST );
+    glDisable( GL_DEPTH_TEST );
+    glDisable( GL_LIGHTING );
+    glDisable( GL_TEXTURE_2D );
+    glEnable( GL_BLEND );
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    glEnable( GL_LINE_SMOOTH );
+
+    glViewport( 0, 0, pixel_w(), pixel_h() );
+    glMatrixMode( GL_PROJECTION );
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho( 0, pixel_w(), 0, pixel_h(), -1, 1 );
+    glMatrixMode( GL_MODELVIEW );
+    glPushMatrix();
+    glLoadIdentity();
+
+    GizmoFrame f;
+    if ( m_XfAxis >= 0 && GizmoGetFrame( f ) && glm::length( f.m_Dir[ m_XfAxis ] ) > 0.0f )
+    {
+        const float * c = GIZMO_COLOR[ m_XfAxis ];
+        glColor4f( c[0], c[1], c[2], 0.85f );
+        glLineWidth( 1.5f * ppu );
+        float reach = 4.0f * ( pixel_w() + pixel_h() );
+        glm::vec2 a = f.m_Origin - f.m_Dir[ m_XfAxis ] * reach;
+        glm::vec2 b = f.m_Origin + f.m_Dir[ m_XfAxis ] * reach;
+        glBegin( GL_LINES );
+        glVertex2f( a.x, a.y );
+        glVertex2f( b.x, b.y );
+        glEnd();
+    }
+
+    string label = m_XfMode == XF_MOVE ? "Move" : "Rotate";
+    if ( m_XfAxis < 0 )
+    {
+        label += ": press X, Y or Z";
+    }
+    else
+    {
+        label += string( " " ) + char( 'X' + m_XfAxis ) + ": " + ( m_XfText.empty() ? string( "0" ) : m_XfText );
+        if ( m_XfMode == XF_ROTATE )
+        {
+            label += " deg";
+        }
+        label += "    (Enter to apply, Esc to cancel)";
+    }
+    gl_font( FL_HELVETICA_BOLD, 16 );
+    glColor4f( 1.0f, 1.0f, 1.0f, 0.95f );
+    gl_draw( label.c_str(), 16.0f * ppu, pixel_h() - 28.0f * ppu );
+
+    glMatrixMode( GL_PROJECTION );
+    glPopMatrix();
+    glMatrixMode( GL_MODELVIEW );
+    glPopMatrix();
+    glPopAttrib();
+
+    glUseProgram( program );
+}
+
+// Two dim lines in the bottom left corner, under the XYZ triad, so the keyboard move and rotate
+// can be found without reading the docs.  Main window only.
+void VspGlWindow::XfHintDraw()
+{
+    if ( m_LinkedScreen != DrawObj::VSP_MAIN_SCREEN )
+    {
+        return;
+    }
+
+    float ppu = pixels_per_unit();
+
+    GLint program = 0;
+    glGetIntegerv( GL_CURRENT_PROGRAM, &program );
+    glUseProgram( 0 );
+
+    glPushAttrib( GL_ALL_ATTRIB_BITS );
+    glDisable( GL_SCISSOR_TEST );
+    glDisable( GL_DEPTH_TEST );
+    glDisable( GL_LIGHTING );
+    glDisable( GL_TEXTURE_2D );
+    glEnable( GL_BLEND );
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+
+    glViewport( 0, 0, pixel_w(), pixel_h() );
+    glMatrixMode( GL_PROJECTION );
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho( 0, pixel_w(), 0, pixel_h(), -1, 1 );
+    glMatrixMode( GL_MODELVIEW );
+    glPushMatrix();
+    glLoadIdentity();
+
+    gl_font( FL_HELVETICA, 13 );
+    glColor4f( 0.85f, 0.87f, 0.90f, 0.55f );
+    gl_draw( "G, X/Y/Z, number, Enter:  move  (e.g. G X 12)", 14.0f * ppu, 30.0f * ppu );
+    gl_draw( "R, X/Y/Z, degrees, Enter:  rotate  (e.g. R Z 90)    Esc cancels", 14.0f * ppu, 12.0f * ppu );
+
+    glMatrixMode( GL_PROJECTION );
+    glPopMatrix();
+    glMatrixMode( GL_MODELVIEW );
+    glPopMatrix();
+    glPopAttrib();
+
+    glUseProgram( program );
+}
+
+//==== TitanVSP: ground grid ====//
+// Drawn in viewport vp right after its scene, in the model's own coordinates, so parts in front of
+// the grid hide it and it hides parts below it.  It lies on z = 0, centred under every component
+// in the model -- hidden ones too -- and looks endless: it's solid near the model and fades out
+// slowly, reaching nothing at 110% of the model's size from its middle.  Lines fall on whole
+// multiples of a round spacing (1, 2 or 5 times a power of ten) that gives about twenty cells
+// across the model, with every fifth line brighter and the X and Y axes in red and green.
+void VspGlWindow::GridDraw( VSPGraphic::Viewport * vp )
+{
+    Vehicle * veh = VehicleMgr.GetVehicle();
+    if ( m_LinkedScreen != DrawObj::VSP_MAIN_SCREEN || !m_GEngine || !vp || !veh || !veh->m_ViewGrid() )
+    {
+        return;
+    }
+    VSPGraphic::Camera * cam = vp->getCamera();
+    if ( !cam || vp->width() <= 0 || vp->height() <= 0 )
+    {
+        return;
+    }
+
+    BndBox box;
+    for ( Geom * g : veh->FindGeomVec( veh->GetGeomVec() ) )
+    {
+        if ( g )
+        {
+            box.Update( g->GetBndBox() );
+        }
+    }
+    if ( box.IsEmpty() )
+    {
+        return;
+    }
+
+    double cx = 0.5 * ( box.GetMin( 0 ) + box.GetMax( 0 ) );
+    double cy = 0.5 * ( box.GetMin( 1 ) + box.GetMax( 1 ) );
+    double size = std::max( box.GetMax( 0 ) - box.GetMin( 0 ),
+                  std::max( box.GetMax( 1 ) - box.GetMin( 1 ), box.GetMax( 2 ) - box.GetMin( 2 ) ) );
+    if ( !( size > 0.0 ) || !std::isfinite( size ) )
+    {
+        return;
+    }
+
+    // Fully there within a quarter of the model's size of its middle, fading smoothly to nothing
+    // at 110% of its size.
+    const double rsolid = 0.25 * size;
+    const double rfade = 1.1 * size;
+    auto fade = [&]( double x, double y )
+    {
+        double r = std::sqrt( ( x - cx ) * ( x - cx ) + ( y - cy ) * ( y - cy ) );
+        if ( r <= rsolid )
+        {
+            return 1.0;
+        }
+        if ( r >= rfade )
+        {
+            return 0.0;
+        }
+        double t = ( r - rsolid ) / ( rfade - rsolid );
+        return 1.0 - t * t * ( 3.0 - 2.0 * t );
+    };
+
+    double raw = size / 20.0;
+    double mag = std::pow( 10.0, std::floor( std::log10( raw ) ) );
+    double step = mag;
+    if ( raw / mag > 5.0 )
+    {
+        step = 10.0 * mag;
+    }
+    else if ( raw / mag > 2.0 )
+    {
+        step = 5.0 * mag;
+    }
+    else if ( raw / mag > 1.0 )
+    {
+        step = 2.0 * mag;
+    }
+
+    double x0 = cx - rfade, x1 = cx + rfade, y0 = cy - rfade, y1 = cy + rfade;
+
+    GLint program = 0;
+    glGetIntegerv( GL_CURRENT_PROGRAM, &program );
+    glUseProgram( 0 );
+
+    glPushAttrib( GL_ALL_ATTRIB_BITS );
+    glDisable( GL_LIGHTING );
+    glDisable( GL_TEXTURE_2D );
+    glDisable( GL_ALPHA_TEST );
+    glDisable( GL_CLIP_PLANE0 );
+    glEnable( GL_BLEND );
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    glShadeModel( GL_SMOOTH );
+    glEnable( GL_LINE_SMOOTH );
+    glEnable( GL_DEPTH_TEST );
+    glDepthFunc( GL_LEQUAL );
+    glDepthMask( GL_FALSE );
+
+    glViewport( vp->x(), vp->y(), vp->width(), vp->height() );
+    glMatrixMode( GL_PROJECTION );
+    glPushMatrix();
+    glLoadMatrixf( &cam->getProjectionMatrix()[0][0] );
+    glMatrixMode( GL_MODELVIEW );
+    glPushMatrix();
+    glLoadMatrixf( &cam->getModelViewMatrix()[0][0] );
+
+    float ppu = pixels_per_unit();
+
+    // A line across the fade circle, in short pieces so its opacity follows the fade.
+    const int npiece = 48;
+    auto line = [&]( double ax, double ay, double bx, double by, const float * c )
+    {
+        glBegin( GL_LINE_STRIP );
+        for ( int k = 0; k <= npiece; k++ )
+        {
+            double t = k / ( double )npiece;
+            double x = ax + t * ( bx - ax ), y = ay + t * ( by - ay );
+            glColor4f( c[0], c[1], c[2], ( float )( c[3] * fade( x, y ) ) );
+            glVertex3d( x, y, 0.0 );
+        }
+        glEnd();
+    };
+
+    const float minor[4] = { 0.36f, 0.38f, 0.42f, 0.45f };
+    const float major[4] = { 0.50f, 0.53f, 0.58f, 0.65f };
+
+    for ( int pass = 0; pass < 2; pass++ )
+    {
+        const float * c = pass == 0 ? minor : major;
+        glLineWidth( ( pass == 0 ? 1.0f : 1.5f ) * ppu );
+        for ( long long i = ( long long )std::ceil( x0 / step ); i * step <= x1; i++ )
+        {
+            if ( i != 0 && ( i % 5 == 0 ) == ( pass == 1 ) )
+            {
+                // Only the part inside the fade circle.
+                double dx = i * step - cx;
+                double h = std::sqrt( std::max( rfade * rfade - dx * dx, 0.0 ) );
+                line( i * step, cy - h, i * step, cy + h, c );
+            }
+        }
+        for ( long long j = ( long long )std::ceil( y0 / step ); j * step <= y1; j++ )
+        {
+            if ( j != 0 && ( j % 5 == 0 ) == ( pass == 1 ) )
+            {
+                double dy = j * step - cy;
+                double h = std::sqrt( std::max( rfade * rfade - dy * dy, 0.0 ) );
+                line( cx - h, j * step, cx + h, j * step, c );
+            }
+        }
+    }
+
+    // The X axis (red) and Y axis (green), fading with the rest.
+    glLineWidth( 2.0f * ppu );
+    const float xaxis[4] = { 1.0f, 0.2f, 0.32f, 0.8f };
+    const float yaxis[4] = { 0.54f, 0.86f, 0.0f, 0.8f };
+    if ( std::abs( cy ) < rfade )
+    {
+        double h = std::sqrt( rfade * rfade - cy * cy );
+        line( cx - h, 0.0, cx + h, 0.0, xaxis );
+    }
+    if ( std::abs( cx ) < rfade )
+    {
+        double h = std::sqrt( rfade * rfade - cx * cx );
+        line( 0.0, cy - h, 0.0, cy + h, yaxis );
+    }
 
     glMatrixMode( GL_PROJECTION );
     glPopMatrix();

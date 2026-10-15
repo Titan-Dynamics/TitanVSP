@@ -137,9 +137,11 @@ MainVSPScreen::MainVSPScreen( ScreenMgr* mgr ) : ActionScreen( mgr )
     m_RightSideMenuItem.Init( this, m_MenuBar, "View/Right", FL_F + 11 );
     m_RightIsoMenuItem.Init( this, m_MenuBar, "View/Right Iso", FL_F + 12 );
     m_PerspectiveMenuItem.Init( this, m_MenuBar, "View/Perspective", '5' );
+    m_GridMenuItem.Init( this, m_MenuBar, "View/Grid" );
+    m_AntialiasMenuItem.Init( this, m_MenuBar, "View/Anti-aliasing" );
     m_SetCORMenuItem.Init( this, m_MenuBar, "View/Set Rotation Center", 'r' );
     m_SetVNMenuItem.Init( this, m_MenuBar, "View/View Normal To", 'n' );
-    m_AlignGeomMenuItem.Init( this, m_MenuBar, "View/View Front Of", 'x' );
+    m_AlignGeomMenuItem.Init( this, m_MenuBar, "View/View Front Of" );   // TitanVSP: x is for G/R.
     m_CenterMenuItem.Init( this, m_MenuBar, "View/Center", 'c' );
     m_CenterAllMenuItem.Init( this, m_MenuBar, "View/Center All", 'C' );
     m_FitViewMenuItem.Init( this, m_MenuBar, "View/Fit On Screen", 'f' );
@@ -312,6 +314,9 @@ bool MainVSPScreen::Update()
     // orthographic.
     bool persp = VehicleMgr.GetVehicle()->m_ViewPerspective();
     m_PerspectiveMenuItem.Update( persp );
+    m_GridMenuItem.Update( VehicleMgr.GetVehicle()->m_ViewGrid() );
+    m_AntialiasMenuItem.Update( VehicleMgr.GetVehicle()->m_ViewAntialias() );
+    m_GlWin->getGraphicEngine()->getDisplay()->setLineSmooth( VehicleMgr.GetVehicle()->m_ViewAntialias() );
     SetPerspective( persp );
 
     m_FLTK_Window->redraw();
@@ -601,6 +606,18 @@ void MainVSPScreen::ActionCB( void * data )
     else if ( data == &m_BorderMenuItem )
     {
         SetShowBorders( !m_ShowBorder );
+    }
+    else if ( data == &m_AntialiasMenuItem )
+    {
+        Vehicle* veh = VehicleMgr.GetVehicle();
+        veh->m_ViewAntialias.Set( !veh->m_ViewAntialias() );
+        m_ScreenMgr->SetUpdateFlag( true );
+    }
+    else if ( data == &m_GridMenuItem )
+    {
+        Vehicle* veh = VehicleMgr.GetVehicle();
+        veh->m_ViewGrid.Set( !veh->m_ViewGrid() );
+        m_ScreenMgr->SetUpdateFlag( true );
     }
     else if ( data == &m_PerspectiveMenuItem )
     {

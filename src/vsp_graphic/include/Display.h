@@ -243,6 +243,14 @@ public:
     * Show the Titan Dynamics logo in the top right of each viewport (TitanVSP).  Off unless a
     * window asks; the main 3D view does.
     */
+    /*!
+    * Smooth lines in the scene (TitanVSP).  Off by default.
+    */
+    void setLineSmooth( bool smooth )
+    {
+        _lineSmooth = smooth;
+    }
+
     void showLogo( bool show )
     {
         _showLogo = show;
@@ -264,6 +272,7 @@ private:
 
     bool _showLogo;
     std::function< void( Viewport * ) > _sceneOverlay;
+    bool _lineSmooth;
     bool _logoTried;
     unsigned int _logoTex;
     int _logoW, _logoH;
