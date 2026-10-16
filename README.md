@@ -240,6 +240,11 @@ keeping the same framing.
 
 All three are on for new models, and each model saves its own settings.
 
+### Geom Browser search
+
+Type in the field above the Geom Browser's tree to narrow it to the components whose names contain
+the text; **Enter** selects them. Clear the field to see everything again.
+
 ### Windows file dialogs
 
 Open, save, import and export use the Windows file dialogs. OpenVSP's own chooser is still

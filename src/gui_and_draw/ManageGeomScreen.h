@@ -116,6 +116,15 @@ protected:
 
     bool m_ClickPick;
 
+    // TitanVSP: search.  Typing narrows the tree to the components whose names contain the text
+    // (any case), with their parents kept so each sits where it belongs; Enter selects them.
+    Fl_Input* m_SearchInput;
+    string m_SearchText;            // Lower case.
+    vector< string > m_SearchMatches;
+    bool SearchMatches( Geom* g ) const;
+    void ApplySearch();                         // Filters the tree to the field's text now.
+    static void SearchTimeoutCB( void* data );  // The same, once typing pauses.
+
     GroupLayout m_MainLayout;
 
     GroupLayout m_HeadLayout;

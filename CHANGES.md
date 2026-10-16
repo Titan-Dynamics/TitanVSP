@@ -26,7 +26,7 @@ length unit. Models keep whatever they were saved with.
 
 | Release | What's in it |
 | --- | --- |
-| Not yet released (`main`) | Keyboard move and rotate (G / R), the ground grid, the anti-aliasing switch, the thicker outline, and the 3D view settings (perspective, grid, anti-aliasing) on by default and saved with each model. |
+| Not yet released (`main`) | Geom Browser search, keyboard move and rotate (G / R), the ground grid, the anti-aliasing switch, the thicker outline, and the 3D view settings (perspective, grid, anti-aliasing) on by default and saved with each model. |
 | [v3.55.0-titan.7](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.7) | Everything else on this page. The zip includes this file, `CHANGES.md`. |
 | v3.55.0-titan.6 (withdrawn) | titan.7 without `CHANGES.md` in the zip. Replaced by titan.7. |
 | v3.55.0-titan.5 (withdrawn) | titan.6 without perspective by default, saved with each model. Replaced by titan.6. |
@@ -160,6 +160,15 @@ grid, rulers, probes and picking work the same in both modes.
 
 The view starts in perspective; each model saves the mode it was left in (see *Saved per model*
 above).
+
+## Geom Browser search
+
+A search field, showing *Search...* while empty, sits above the Geom Browser's tree. Typing narrows the tree to the components whose
+names contain the text, in any case, with their parents kept (dimmed) so each match sits where it
+belongs; collapsed branches open to show the matches inside. **Enter** selects every match.
+Clearing the field brings the whole tree back. The tree is rebuilt once typing pauses for 0.2 s
+(Enter rebuilds at once), with an ID lookup rather than a walk of the tree for each row, so it
+stays quick with thousands of components.
 
 ## Windows file dialogs
 

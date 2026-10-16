@@ -389,6 +389,19 @@ it.
   restore through `Parm::GetLastVal()`: it's only the previous value, not the one before the
   export.
 
+## Geom Browser search
+
+`ManageGeomScreen` (`m_SearchInput`, a `SearchField` -- an `Fl_Input` that draws a dim
+"Search..." while empty -- over the tree, `FL_WHEN_CHANGED` and Enter). `CallBack` handles it
+first, before the browser's `x` check. A change is debounced: it restarts a 0.2 s
+`SearchTimeoutCB` timeout, and Enter cancels the timeout and applies at once. `ApplySearch`
+lower-cases the text into `m_SearchText`, marks the geom map dirty and calls `LoadBrowser`, whose rebuild keeps only the
+matches (`SearchMatches`: case-insensitive substring of the name) and their ancestors, records the
+matches in `m_SearchMatches`, and finds parent rows in an `unordered_map` (upstream walked the tree
+with `GetItemByRefId` for every row, quadratic in the number of components). While searching,
+context-only ancestors are drawn in `FL_INACTIVE_COLOR` and no item is closed. Enter selects
+`m_SearchMatches` via `SetSelection`.
+
 ## File chooser
 
 `ScreenMgr::FileChooser` is the single entry point for every open/save dialog. It reads the

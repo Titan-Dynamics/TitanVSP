@@ -6,6 +6,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "ManageGeomScreen.h"
+#include <FL/fl_draw.H>
+#include <algorithm>
+#include <unordered_set>
+#include <unordered_map>
 #include "CloneDeleteDialog.h"
 #include "CloneGeom.h"
 #include "CloneNameSuffixScreen.h"
@@ -17,6 +21,29 @@ using namespace vsp;
 
 
 //==== Constructor ====//
+namespace
+{
+// A text field showing a dim "Search..." while it's empty.
+class SearchField : public Fl_Input
+{
+public:
+    SearchField( int x, int y, int w, int h ) : Fl_Input( x, y, w, h ) {}
+
+    void draw() override
+    {
+        Fl_Input::draw();
+        if ( size() == 0 )
+        {
+            fl_push_clip( x() + Fl::box_dx( box() ), y() + Fl::box_dy( box() ), w() - Fl::box_dw( box() ), h() - Fl::box_dh( box() ) );
+            fl_font( textfont(), textsize() );
+            fl_color( FL_INACTIVE_COLOR );
+            fl_draw( "Search...", x() + Fl::box_dx( box() ) + 3, y(), w() - Fl::box_dw( box() ) - 3, h(), FL_ALIGN_LEFT );
+            fl_pop_clip();
+        }
+    }
+};
+}
+
 ManageGeomScreen::ManageGeomScreen( ScreenMgr* mgr ) : BasicScreen( mgr, 275, 671, "Geom Browser" )
 {
     m_FLTK_Window->callback( staticCloseCB, this );
@@ -79,8 +106,20 @@ ManageGeomScreen::ManageGeomScreen( ScreenMgr* mgr ) : BasicScreen( mgr, 275, 67
     m_LeftLayout.AddYGap();
     m_LeftLayout.AddButton( m_MoveBotButton, "@2>>" );
 
+    // TitanVSP: a search field over the tree.
+    const int search_h = 24;
+    m_SearchInput = new SearchField( m_MidLayout.GetX(), m_MidLayout.GetY(), m_MidLayout.GetW(), search_h );
+    m_SearchInput->box( FL_THIN_DOWN_BOX );
+    m_SearchInput->color( FL_BACKGROUND2_COLOR );
+    m_SearchInput->textsize( 13 );
+    m_SearchInput->tooltip( "Search: type part of a name to narrow the list; Enter selects the matches" );
+    m_SearchInput->when( FL_WHEN_CHANGED | FL_WHEN_ENTER_KEY_ALWAYS );
+    m_SearchInput->callback( staticScreenCB, this );
+    m_MidLayout.GetGroup()->add( m_SearchInput );
+    m_MidLayout.AddY( search_h + 3 );
+
     bool resizable = true;
-    m_GeomBrowser = m_MidLayout.AddTreeWithIcons( m_MidLayout.GetH() - 5, resizable );
+    m_GeomBrowser = m_MidLayout.AddTreeWithIcons( m_MidLayout.GetH() - 5 - search_h - 3, resizable );
     m_GeomBrowser->Init( this, m_MidLayout.GetGroup() );
     m_GeomBrowser->showroot( true );
     m_GeomBrowser->selectmode( FL_TREE_SELECT_MULTI );
@@ -263,19 +302,44 @@ void ManageGeomScreen::LoadBrowser()
         geom_tree_item = m_GeomBrowser->AddRow( vid_str.c_str(), nullptr );
         geom_tree_item->SetRefID( vid_str );
 
+        // TitanVSP: with a search, only the matches and their parents go in.  Rows are found by ID
+        // in a map as the tree is built, rather than by walking the tree for each, so building
+        // stays quick with thousands of components.
+        std::unordered_set< string > keep;
+        m_SearchMatches.clear();
+        if ( !m_SearchText.empty() )
+        {
+            for ( Geom* g : geom_ptr_vec )
+            {
+                if ( g && SearchMatches( g ) )
+                {
+                    m_SearchMatches.push_back( g->GetID() );
+                    for ( Geom* a = g; a && keep.insert( a->GetID() ).second; a = m_VehiclePtr->FindGeom( a->GetParentID() ) )
+                    {
+                    }
+                }
+            }
+        }
+        std::unordered_map< string, TreeIconItem* > rows;
+
         //==== Step Thru Geoms ====//
         for ( int i = 0 ; i < ( int )geom_ptr_vec.size() ; i++ )
         {
             if ( geom_ptr_vec[i] )
             {
                 string id_str = geom_ptr_vec[i]->GetID();
+                if ( !m_SearchText.empty() && !keep.count( id_str ) )
+                {
+                    continue;
+                }
                 TreeIconItem* parent_item = nullptr;
                 string parent_id = geom_ptr_vec[i]->GetParentID();
                 
                 // Note to DEVS: if geom_vec is ALWAYS hierachically provided, this method works, but issue is what if a child is read before its parent is registered?
                 if ( parent_id != string( "NONE" ) )
                 {
-                    parent_item = m_GeomBrowser->GetItemByRefId( parent_id );
+                    auto it = rows.find( parent_id );
+                    parent_item = it != rows.end() ? it->second : m_GeomBrowser->GetItemByRefId( parent_id );
                 }
 
                 if ( parent_item )
@@ -287,6 +351,7 @@ void ManageGeomScreen::LoadBrowser()
                     geom_tree_item = m_GeomBrowser->AddRow( id_str.c_str() );
                 }
                 geom_tree_item->SetRefID( id_str );
+                rows[ id_str ] = geom_tree_item;
             }
         }
     }
@@ -442,6 +507,11 @@ void ManageGeomScreen::LoadBrowser()
                 {
                     label_color = fl_lighter( label_color );
                 }
+                // While searching, parents that are only there to place a match are dimmed.
+                if ( !m_SearchText.empty() && !SearchMatches( gPtr ) )
+                {
+                    label_color = FL_INACTIVE_COLOR;
+                }
                 geom_tree_item->labelcolor( label_color );
 
                 // Italics mark an automatic name, which the browser will not rename.
@@ -454,8 +524,9 @@ void ManageGeomScreen::LoadBrowser()
                     geom_tree_item->labelfont( FL_HELVETICA );
                 }
 
-                // Close item if display children flag false
-                if ( !gPtr->m_GuiDraw.GetDisplayChildrenFlag() )
+                // Close item if display children flag false -- but not while searching, when the
+                // matches inside must show.
+                if ( m_SearchText.empty() && !gPtr->m_GuiDraw.GetDisplayChildrenFlag() )
                 {
                     m_GeomBrowser->close( const_cast< TreeIconItem* >( geom_tree_item ), false );
                 }
@@ -1099,6 +1170,27 @@ void ManageGeomScreen::CallBack( Fl_Widget *w )
 
     m_GeomBrowser->HidePopupInput();
 
+    if ( w == m_SearchInput )
+    {
+        if ( Fl::event_key() == FL_Enter || Fl::event_key() == FL_KP_Enter )
+        {
+            // Enter filters at once, without waiting for the pause, and selects the matches.
+            Fl::remove_timeout( SearchTimeoutCB, this );
+            ApplySearch();
+            if ( !m_SearchText.empty() && !m_SearchMatches.empty() )
+            {
+                SetSelection( m_SearchMatches );
+            }
+        }
+        else
+        {
+            // Rebuild once typing pauses, not on every key: each rebuild walks every component.
+            Fl::remove_timeout( SearchTimeoutCB, this );
+            Fl::add_timeout( 0.2, SearchTimeoutCB, this );
+        }
+        return;
+    }
+
     if ( Fl::event_key() == 'x' )
     {
         vector < string > selVec = GetActiveGeoms();
@@ -1382,6 +1474,35 @@ void ManageGeomScreen::Set( const std::string &geomId )
 
     SetNeedsShowHideGeoms();
     m_ScreenMgr->SetUpdateFlag( true );
+}
+
+void ManageGeomScreen::SearchTimeoutCB( void* data )
+{
+    ( ( ManageGeomScreen* )data )->ApplySearch();
+}
+
+void ManageGeomScreen::ApplySearch()
+{
+    string text = m_SearchInput->value();
+    std::transform( text.begin(), text.end(), text.begin(), ::tolower );
+    if ( text != m_SearchText )
+    {
+        m_SearchText = text;
+        m_VehiclePtr->SetGeomMapDirtyFlag( true );
+        LoadBrowser();
+    }
+}
+
+// Whether a component's name contains the search text, in any case.
+bool ManageGeomScreen::SearchMatches( Geom* g ) const
+{
+    if ( !g || m_SearchText.empty() )
+    {
+        return false;
+    }
+    string name = g->GetName();
+    std::transform( name.begin(), name.end(), name.begin(), ::tolower );
+    return name.find( m_SearchText ) != string::npos;
 }
 
 void ManageGeomScreen::SetSelection( const vector< string > & geom_ids )
