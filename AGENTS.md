@@ -103,7 +103,7 @@ header comment gives the outline; this section covers what you need to change it
 
 - **Type:** `FILLET_GEOM_TYPE` in `APIDefines.h`. Registered in `Vehicle.cpp` (`GeomType(...,
   "FILLET", true)` and the `CreateGeom` branch). `Vehicle::AddGeom` refuses it unless the parent
-  is a Wing or a body (`FilletGeom::IsBodyType`: Fuselage, Pod, Stack).
+  is a Wing or a body (`FilletGeom::IsBodyType`: Fuselage, Pod, Stack, Cylinder).
 - **Screen:** `FilletScreen` (`FILLET_GEOM_SCREEN`), registered with the other geom screens in
   `ManageGeomScreen.cpp`. It shows the Design parms and `GetStatus()`.
 - **Dependencies:** the fillet is a child of the part it hangs off, and a *step child* of the part
