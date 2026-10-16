@@ -25,15 +25,15 @@ length unit. Models keep whatever they were saved with.
 
 ## Releases
 
-Releases are automatic. Every push to `main` is built on GitHub Actions
-([`.github/workflows/release.yml`](.github/workflows/release.yml)) and published as the next
+Releases are made by the **Release** workflow on GitHub Actions
+([`.github/workflows/release.yml`](.github/workflows/release.yml)), run by hand from the Actions
+tab (**Release → Run workflow**, on `main`). It builds `main` and publishes it as the next
 release, `v3.55.0-titan.<n>`, with the Windows zip attached and its SHA-256 in the notes. The
 previous release and its tag are then deleted, so the
-[Releases](https://github.com/Titan-Dynamics/TitanVSP/releases) page always has one release, built
-from the latest `main`, with everything on this page. The notes come from
+[Releases](https://github.com/Titan-Dynamics/TitanVSP/releases) page always has one release. The notes come from
 [`.github/release-notes.md`](.github/release-notes.md).
 
-Before releases were automatic (all since replaced):
+Before the workflow (all since replaced):
 
 | Release | What's in it |
 | --- | --- |
@@ -275,8 +275,8 @@ it scales smoothly at any window size. Other 3D windows, such as the XSec View, 
   it next to the repo. `-Clean` and `-CleanAll` rebuild from scratch.
 - `dev\run.ps1` does an incremental build and launches `vsp.exe`. `-NoBuild` just launches it.
 - `dev\install-shortcut.ps1` adds a one-click "TitanVSP (Dev)" shortcut that runs `run.ps1`.
-- Every push to `main` builds and publishes a release, replacing the previous one; see
-  [Releases](#releases).
+- A GitHub Actions workflow, run by hand, builds `main` and publishes it as a release, replacing
+  the previous one; see [Releases](#releases).
 - The install folder and release zip include `CHANGES.md` alongside `README.md`, so the list of
   TitanVSP's changes ships with the program.
 - The Windows build enables the Python API and sets up a venv with the `openvsp` package installed

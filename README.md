@@ -14,8 +14,8 @@ Models, scripts and the `openvsp` Python API work as they do in OpenVSP 3.55.0.
 **What's changed:** every change from upstream OpenVSP is listed in [CHANGES.md](CHANGES.md).
 
 **Download:** a ready-to-run Windows build is on the
-[Releases](https://github.com/Titan-Dynamics/TitanVSP/releases) page. Every push to `main` is
-built and published there automatically, replacing the previous release, so it's always current.
+[Releases](https://github.com/Titan-Dynamics/TitanVSP/releases) page. Each release replaces the
+previous one, so there's only ever one: the latest.
 
 - [Highlights](#highlights)
 - [About OpenVSP](#about-openvsp)
@@ -301,8 +301,8 @@ window. **View → Use White Background** switches to a white background for pri
 ### Windows dev scripts
 
 `dev\build.ps1`, `dev\run.ps1` and `dev\install-shortcut.ps1`, described
-[above](#build-and-run). Releases are built by GitHub Actions on every push to `main`
-(`.github/workflows/release.yml`).
+[above](#build-and-run). Releases are built by a GitHub Actions workflow you run by hand
+(`.github/workflows/release.yml`; see [CHANGES.md](CHANGES.md#releases)).
 
 ### Python API in the dev build
 

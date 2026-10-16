@@ -1,25 +1,25 @@
-# TitanVSP: every push to main builds the Windows zip and publishes it as the next release,
-# v<version>-titan.<n+1>, then deletes the previous release and its tag, so the Releases page
-# always has exactly one release, matching main.  The notes come from .github/release-notes.md,
-# with the commit and the zip's SHA-256 appended.
+# TitanVSP: run by hand (Actions -> Release -> Run workflow).  Builds the Windows zip from main and
+# publishes it as the next release, v<version>-titan.<n+1>, then deletes the previous release and
+# its tag, so the Releases page always has exactly one release.  The notes come from
+# .github/release-notes.md, with the commit and the zip's SHA-256 appended.
 
 name: Release
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
   contents: write
 
-# A newer push supersedes a release still building.
+# A newer run supersedes a release still building.
 concurrency:
   group: release
   cancel-in-progress: true
 
 jobs:
   release:
+    # Releases are only made from main.
+    if: github.ref == 'refs/heads/main'
     runs-on: windows-2022
     timeout-minutes: 360
     env:

@@ -1,6 +1,6 @@
 TitanVSP is Titan Dynamics' build of [OpenVSP](https://github.com/OpenVSP/OpenVSP) 3.55.0. It adds a **Fillet** component that blends wings and fuselages into each other with smooth rolling-ball fillets, and reworks the day-to-day experience: a dark interface, a perspective 3D view, the Windows file dialogs, VSPAERO results you can pan, zoom and read values from, a VSPAERO Viewer that handles like the main 3D view and saves high-resolution images, Blender-style selecting, moving and rotating in the 3D view, a searchable Geom Browser, a plain Cylinder component, and more control over exports.
 
-Each push to `main` is built and published here automatically, replacing the previous release, so this is always the latest TitanVSP.
+Each new release replaces the previous one, so this is always the latest TitanVSP.
 
 ## What's new
 

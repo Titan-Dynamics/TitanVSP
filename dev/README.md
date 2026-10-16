@@ -13,8 +13,9 @@ Pandoc is optional (in-app help).
 
 Run any of them with `powershell -ExecutionPolicy Bypass -File dev\<script>.ps1`.
 
-Releases aren't built here: every push to `main` builds the zip on GitHub Actions
-(`.github/workflows/release.yml`) and publishes it as the next release, replacing the previous one.
+Releases aren't built here: the **Release** workflow on GitHub Actions (`.github/workflows/release.yml`),
+run by hand from the Actions tab, builds `main` and publishes it as the next release, replacing the
+previous one.
 
 ## Python API
 

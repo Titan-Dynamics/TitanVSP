@@ -444,12 +444,13 @@ the zip name.
 
 ## Releases
 
-Releases are automatic: every push to `main` runs
-[`.github/workflows/release.yml`](.github/workflows/release.yml) on a Windows runner. It builds the
+Releases are made by [`.github/workflows/release.yml`](.github/workflows/release.yml), which the
+user runs by hand (`workflow_dispatch`, on `main` only; `gh workflow run release.yml` from the
+command line). Pushing doesn't release. On a Windows runner it builds the
 libraries and the `PACKAGE` zip with the same options as `dev\build.ps1`, publishes it as the next
 tag, `v<openvsp version>-titan.<n+1>` (e.g. `v3.55.0-titan.9` after `titan.8`), then deletes every
-other `-titan.` release and its tag. A newer push cancels a build still running. Don't create or
-delete releases by hand, and don't move tags.
+other `-titan.` release and its tag. A newer run cancels one still building. Run it only when
+asked; don't create or delete releases by hand, and don't move tags.
 
 The release notes are [`.github/release-notes.md`](.github/release-notes.md); the workflow appends
 the commit and the zip's SHA-256. Keep its "Recently added" list current with each user-facing
