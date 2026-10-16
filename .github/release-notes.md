@@ -1,4 +1,4 @@
-TitanVSP is Titan Dynamics' build of [OpenVSP](https://github.com/OpenVSP/OpenVSP) 3.55.0. It adds a **Fillet** component that blends wings and fuselages into each other with smooth rolling-ball fillets, and reworks the day-to-day experience: a dark interface, a perspective 3D view, the Windows file dialogs, VSPAERO results you can pan, zoom and read values from, a VSPAERO Viewer that handles like the main 3D view and saves high-resolution images, Blender-style selecting, moving and rotating in the 3D view, a searchable Geom Browser, a plain Cylinder component, and more control over exports.
+TitanVSP is Titan Dynamics' build of [OpenVSP](https://github.com/OpenVSP/OpenVSP) 3.55.0. It adds a **Fillet** component that blends wings and fuselages into each other with smooth rolling-ball fillets, and reworks the day-to-day experience: a dark interface, a perspective 3D view, the system file dialogs by default, VSPAERO results you can pan, zoom and read values from, a VSPAERO Viewer that handles like the main 3D view and saves high-resolution images, Blender-style selecting, moving and rotating in the 3D view, a searchable Geom Browser, a plain Cylinder component, and more control over exports.
 
 Each new release replaces the previous one, so this is always the latest TitanVSP.
 
@@ -29,7 +29,7 @@ Each new release replaces the previous one, so this is always the latest TitanVS
 - **Titan Dynamics logo** in the top-right corner of the 3D view.
 - **Fillet component** for wing roots and body-to-body joins: a separate, closed, watertight body that rebuilds whenever either part changes.
 - **Dark theme** throughout, including title bars and the 3D view, with light component lines and white selection highlights.
-- **Windows file dialogs** for every open, save, import and export.
+- **System file dialogs by default** for every open, save, import and export: OpenVSP's existing **Native** file chooser preference is now the default.
 - **VSPAERO results plots:** drag to pan, wheel to zoom about the cursor (Ctrl for x only, Shift for y only), double-click to reset, hover to read x and y; light x = 0 and y = 0 axes.
 
 The full list is in [CHANGES.md](https://github.com/Titan-Dynamics/TitanVSP/blob/main/CHANGES.md).

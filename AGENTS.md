@@ -7,7 +7,7 @@ fork adds, see [CHANGES.md](CHANGES.md). For building and using it, see [README.
 
 TitanVSP is OpenVSP 3.55.0 (NASA's parametric aircraft geometry tool, C++ with FLTK and OpenGL)
 plus Titan Dynamics' changes: the Fillet component; interface and usability work across TitanVSP
-and the VSPAERO Viewer (dark theme, perspective view, native file dialogs, graph and viewer mouse
+and the VSPAERO Viewer (dark theme, perspective view, native file dialogs by default, graph and viewer mouse
 controls, image export); and export options. The first commit imports upstream OpenVSP 3.55.0 as
 one squashed commit; everything after it is TitanVSP's. To see exactly what the fork changes:
 
@@ -420,6 +420,9 @@ context-only ancestors are drawn in `FL_INACTIVE_COLOR` and no item is closed. E
 `m_SearchMatches` via `SetSelection`.
 
 ## File chooser
+
+This is upstream code: `ScreenMgr::FileChooser` and both dialogs are OpenVSP's. TitanVSP only changed the
+preference's default (and renamed the built-in option's label to "TitanVSP Default").
 
 `ScreenMgr::FileChooser` is the single entry point for every open/save dialog. It reads the
 `File_Chooser` preference (`openvsp.org`/`VSP` store, `Application` group), which defaults to

@@ -3,7 +3,7 @@
 TitanVSP is Titan Dynamics' build of [OpenVSP](https://github.com/OpenVSP/OpenVSP) **3.55.0**,
 NASA's parametric aircraft geometry tool. It adds a **Fillet** component that blends wings and
 fuselages into each other with smooth rolling-ball fillets, and reworks the day-to-day
-experience: a dark interface, a perspective 3D view, the Windows file dialogs, VSPAERO results you
+experience: a dark interface, a perspective 3D view, the system file dialogs by default, VSPAERO results you
 can pan, zoom and read values from, a VSPAERO Viewer that handles like the main 3D view and saves
 high-resolution images, Blender-style selecting, moving and rotating in the 3D view, a searchable
 Geom Browser, a plain Cylinder component, and more control over exports. Windows scripts build and
@@ -35,7 +35,7 @@ previous one, so there's only ever one: the latest.
 | **Interface** | A dark theme throughout, including title bars and the 3D view; light component lines, with the selected component drawn brighter inside a thin white box; the Titan Dynamics logo in the 3D view. |
 | **3D view** | Click a component to select it, and Blender-style move arrows to drag it along X, Y or Z in whole units, or type **G**/**R**, an axis and a number to move or rotate it exactly. Blanks shown as balls. An orthographic/perspective switch (**View → Perspective**, key **5**) that keeps the framing, a ground grid, anti-aliasing, and a switch to hide every component's outlines. |
 | **Geom Browser** | A search field that narrows the tree to matching components and selects them. |
-| **Files** | The Windows Open and Save dialogs for every open, save, import and export. |
+| **Files** | The system Open and Save dialogs by default. OpenVSP already offers them as a preference; TitanVSP only makes them the default. |
 | **VSPAERO results** | Results Manager plots you can drag to pan, wheel to zoom, and hover to read x and y, with light x = 0 and y = 0 axes. |
 | **VSPAERO Viewer** | A dark theme, the main 3D view's mouse controls, and PNG export at any width through the Save dialog. |
 | **Export** | STL export at a resolution you choose, without changing the model; STEP and IGES in millimetres by default. |
@@ -256,10 +256,12 @@ All four are on for new models, and each model saves its own settings.
 Type in the field above the Geom Browser's tree to narrow it to the components whose names contain
 the text; **Enter** selects them. Clear the field to see everything again.
 
-### Windows file dialogs
+### System file dialogs by default
 
-Open, save, import and export use the Windows file dialogs. OpenVSP's own chooser is still
-under **File → Preferences… → File Chooser**.
+Open, save, import and export use the system's own file dialogs out of the box. This isn't new
+code: OpenVSP already has the option, as **Native** under **File → Preferences… → File Chooser**.
+TitanVSP only changes the default from OpenVSP's built-in chooser to Native. The built-in chooser
+is still there under the same setting, listed as "TitanVSP Default".
 
 ### VSPAERO results plots
 

@@ -14,7 +14,7 @@ length unit. Models keep whatever they were saved with.
 - [Cylinder component](#cylinder-component)
 - [Dark theme](#dark-theme)
 - [3D view](#3d-view)
-- [Windows file dialogs](#windows-file-dialogs)
+- [System file dialogs by default](#system-file-dialogs-by-default)
 - [VSPAERO results plots](#vspaero-results-plots)
 - [VSPAERO Viewer](#vspaero-viewer)
 - [Export options](#export-options)
@@ -194,11 +194,15 @@ Clearing the field brings the whole tree back. The tree is rebuilt once typing p
 (Enter rebuilds at once), with an ID lookup rather than a walk of the tree for each row, so it
 stays quick with thousands of components.
 
-## Windows file dialogs
+## System file dialogs by default
 
 Open, save, import and export use the operating system's own file dialog by default, instead of
-OpenVSP's built-in chooser. The built-in one, with its favourite folders, is still available under
-**File → Preferences… → File Chooser**. A choice already saved there is kept.
+OpenVSP's built-in chooser. This is a change of default only, not new code. OpenVSP 3.55.0 already
+offers the system dialog as **Native** under **File → Preferences… → File Chooser**. TitanVSP
+changes that preference's default from the built-in chooser to Native (in `ScreenMgr.cpp` and
+`PreferencesScreen.cpp`). The built-in chooser, with its favourite folders, is still available
+there, listed as "TitanVSP Default" (upstream calls it "OpenVSP Default"). A choice already saved
+there is kept.
 
 ## VSPAERO results plots
 
