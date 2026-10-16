@@ -1,0 +1,93 @@
+# TitanVSP: every push to main builds the Windows zip and publishes it as the next release,
+# v<version>-titan.<n+1>, then deletes the previous release and its tag, so the Releases page
+# always has exactly one release, matching main.  The notes come from .github/release-notes.md,
+# with the commit and the zip's SHA-256 appended.
+
+name: Release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# A newer push supersedes a release still building.
+concurrency:
+  group: release
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: windows-2022
+    timeout-minutes: 360
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+
+    # The Python API is built for, and only loads in, Python 3.11.
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.11'
+
+    - name: Install tools
+      shell: pwsh
+      run: |
+        choco install -y --no-progress swig pandoc
+        python -m pip install numpy
+        "C:\Program Files\Pandoc" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Build libraries
+      shell: pwsh
+      run: |
+        cmake -S Libraries -B ..\libs -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        cmake --build ..\libs --config Release --parallel
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+    # The same configuration as dev\build.ps1.
+    - name: Build and package TitanVSP
+      shell: pwsh
+      run: |
+        $libs = (Resolve-Path ..\libs).Path
+        $swig = (Get-Command swig).Source
+        $python = (Get-Command python).Source
+        cmake -S src -B ..\vsp -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release `
+          "-DVSP_LIBRARY_PATH=$libs" "-DSWIG_EXECUTABLE=$swig" "-DPython3_EXECUTABLE=$python" `
+          -DPYTHON_VERSION_SHORT=3.11 -DVSP_NO_API_WRAPPERS=OFF -DVSP_NO_DOC=ON -DVSP_NO_PYDOC=ON
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        cmake --build ..\vsp --config Release --target PACKAGE --parallel
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+    - name: Publish the release and delete the old one
+      shell: bash
+      run: |
+        set -euo pipefail
+        zip=$(ls ../vsp/TitanVSP-*-win64.zip | head -1)
+        ver=$(basename "$zip" | sed -E 's/^TitanVSP-(.*)-win64\.zip$/\1/')
+
+        # Next number after the highest titan.<n> tag for this version.
+        last=$(git ls-remote --tags origin "refs/tags/v${ver}-titan.*" \
+          | sed -nE "s#.*refs/tags/v${ver//./\.}-titan\.([0-9]+)\$#\1#p" | sort -n | tail -1)
+        tag="v${ver}-titan.$(( ${last:-0} + 1 ))"
+
+        sha=$(sha256sum "$zip" | cut -d' ' -f1)
+        cp .github/release-notes.md notes.md
+        printf '\nBuilt from %s.\n\nSHA-256 of the zip: `%s`\n' "$GITHUB_SHA" "$sha" >> notes.md
+
+        gh release create "$tag" "$zip" --target "$GITHUB_SHA" \
+          --title "TitanVSP $ver for Windows" --notes-file notes.md --latest
+        echo "Published $tag"
+
+        # Then remove every other TitanVSP release and its tag, including any left behind by a
+        # run that was cancelled between publishing and cleaning up.
+        gh release list --limit 200 --json tagName -q '.[].tagName' \
+          | grep -E '^v.+-titan\.[0-9]+$' | grep -vxF "$tag" \
+          | while read -r old; do
+              gh release delete "$old" --cleanup-tag --yes
+              echo "Deleted $old"
+            done
