@@ -29,5 +29,5 @@ python -c "import openvsp as vsp; print(vsp.GetVSPVersion())"
 
 ## Syncing with upstream
 
-TitanVSP's history starts from a squashed import of OpenVSP 3.55.0, so upstream releases are applied
-as patches rather than merged. See "Keeping up with upstream" in the main [README](../README.md).
+Upstream OpenVSP's history is part of TitanVSP's, so a newer OpenVSP release is merged by its tag.
+See "Keeping up with upstream" in the main [README](../README.md).

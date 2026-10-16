@@ -342,23 +342,22 @@ The Windows build enables the Python API and sets up a venv with the bindings, a
 
 ## Keeping up with upstream
 
-TitanVSP's history starts with one commit importing OpenVSP 3.55.0 (upstream tag
-`OpenVSP_3.55.0`), with TitanVSP's own changes on top. OpenVSP's full history stays in the
-[upstream repository](https://github.com/OpenVSP/OpenVSP).
+TitanVSP starts from OpenVSP 3.55.0 (upstream tag `OpenVSP_3.55.0`), and OpenVSP's full history is
+part of this repository's, so `git log` and `git blame` show upstream's commits as well as
+TitanVSP's.
 
-To move to a newer OpenVSP release, apply upstream's changes between the two releases as one
-commit. For example, for 3.56.0:
+To move to a newer OpenVSP release, merge its tag. For example, for 3.56.0:
 
 ```powershell
 git remote add upstream https://github.com/OpenVSP/OpenVSP.git   # once
-git fetch upstream --tags
-git diff --binary OpenVSP_3.55.0 OpenVSP_3.56.0 | git apply -3
-git commit -m "Update to OpenVSP 3.56.0"
+git config remote.upstream.tagOpt --no-tags                       # once
+git fetch --no-tags upstream refs/tags/OpenVSP_3.56.0:refs/tags/OpenVSP_3.56.0
+git merge OpenVSP_3.56.0
 ```
 
-`-3` falls back to a three-way merge wherever TitanVSP changed the same lines, and leaves any
-conflicts for you to resolve as usual. Don't push the upstream tags (`git push --tags`), or
-OpenVSP's release tags will show up in TitanVSP.
+Resolve any conflicts where TitanVSP changed the same lines, as with any merge. Push `main` only;
+don't push the upstream tags (`git push --tags`), or OpenVSP's release tags will show up in
+TitanVSP.
 
 ## License
 

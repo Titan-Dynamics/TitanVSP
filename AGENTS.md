@@ -8,11 +8,14 @@ fork adds, see [CHANGES.md](CHANGES.md). For building and using it, see [README.
 TitanVSP is OpenVSP 3.55.0 (NASA's parametric aircraft geometry tool, C++ with FLTK and OpenGL)
 plus Titan Dynamics' changes: the Fillet component; interface and usability work across TitanVSP
 and the VSPAERO Viewer (dark theme, perspective view, native file dialogs by default, graph and viewer mouse
-controls, image export); and export options. The first commit imports upstream OpenVSP 3.55.0 as
-one squashed commit; everything after it is TitanVSP's. To see exactly what the fork changes:
+controls, image export); and export options. TitanVSP's own history starts with commit `5995cc38c`
+("Import OpenVSP 3.55.0"), whose files are exactly upstream's `OpenVSP_3.55.0` tag; a later merge
+(`Join upstream OpenVSP history at 3.55.0`, strategy `ours`, no file changes) makes upstream's
+history an ancestor, so `git log` and `git blame` reach back through OpenVSP's commits. Everything
+after the import is TitanVSP's. To see exactly what the fork changes:
 
 ```sh
-git diff $(git rev-list --max-parents=0 HEAD) HEAD --stat
+git diff 5995cc38c HEAD --stat
 ```
 
 Everything outside those files is upstream code. Leave it as it is unless a task needs a change
@@ -513,17 +516,19 @@ has favourite folders. The default appears in two places, `ScreenMgr.cpp` and
 
 ## Upstream updates
 
-History starts from a squashed import, so upstream releases go in as a diff between release tags,
-not a merge:
+Upstream's history is part of this repository's (see the top of this file), so a newer OpenVSP
+release goes in as an ordinary merge of its tag:
 
 ```sh
 git remote add upstream https://github.com/OpenVSP/OpenVSP.git   # once
-git fetch upstream --tags
-git diff --binary OpenVSP_3.55.0 OpenVSP_3.56.0 | git apply -3
+git config remote.upstream.tagOpt --no-tags                       # once: don't pull in all of upstream's tags
+git fetch --no-tags upstream refs/tags/OpenVSP_3.56.0:refs/tags/OpenVSP_3.56.0
+git merge OpenVSP_3.56.0
 ```
 
 Resolve conflicts in the files TitanVSP touches, then rebuild and re-check fillets, the theme and
-the view. Never push upstream's tags to this repository. When the version changes, update the
+the view. Push `main` only: never push upstream's tags to this repository (`git push --tags` would
+put OpenVSP's release tags on TitanVSP's GitHub). When the version changes, update the
 version numbers in [README.md](README.md), [CHANGES.md](CHANGES.md) and
 [`.github/release-notes.md`](.github/release-notes.md); the release workflow takes the version from
 the zip name.
