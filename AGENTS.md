@@ -237,7 +237,9 @@ The only Parms are `Length` and `Diameter`. `FilletGeom::IsBodyType` includes it
   (a `static const unsigned char TITAN_LOGO_PNG[]` of the file's bytes and its size).
 - **Line colours:** the default component colour is `Color::Color()` in
   `geom_core/Color.cpp` (170, 170, 170). Selection highlights are in `Geom.cpp` (bounding box,
-  active XSec, active sub-surface), `PickableGeom.cpp` and `Viewport::drawBorder`. A selected
+  active XSec, active sub-surface), `PickableGeom.cpp` and `Viewport::drawBorder`. The viewport
+  border starts off (`MainVSPScreen::m_ShowBorder`); `Update` reapplies it, since new viewports
+  start with it on. A selected
   component is brightened in `Geom::LoadMainDrawObjs` (lines a third of the way to white, a little
   emission on its material), for drawing only. The selection boxes (`m_HighlightDrawObj`, and
   WingGeom's `m_SectBBoxDrawObj`) are 3 px at 50% alpha, through `DrawObj::m_LineAlpha`, a

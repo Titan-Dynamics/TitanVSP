@@ -52,7 +52,7 @@ MainVSPScreen::MainVSPScreen( ScreenMgr* mgr ) : ActionScreen( mgr )
 
     m_ShowXYZArrow = true;
     m_Perspective = false;
-    m_ShowBorder = true;
+    m_ShowBorder = false;   // TitanVSP: no border round the active viewport unless asked for.
 
     int x, y, w, h;
     w = 500;
@@ -310,6 +310,7 @@ bool MainVSPScreen::Update()
 
     m_AxisMenuItem.Update( m_ShowXYZArrow );
     m_BorderMenuItem.Update( m_ShowBorder );
+    SetShowBorders( m_ShowBorder );     // TitanVSP: new viewports start with borders on.
     // The model says whether the view is in perspective, so each file reopens as it was left.
     // Reapplied every update: changing the window layout makes new viewports, which start
     // orthographic.

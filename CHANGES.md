@@ -33,11 +33,11 @@ previous release and its tag are then deleted, so the
 [Releases](https://github.com/Titan-Dynamics/TitanVSP/releases) page always has one release. The notes come from
 [`.github/release-notes.md`](.github/release-notes.md).
 
-Before the workflow (all since replaced):
+Releases made by hand, before the workflow:
 
 | Release | What's in it |
 | --- | --- |
-| v3.55.0-titan.8 | Everything on this page except **View → Outlines**. The last release made by hand. |
+| [v3.55.0-titan.8](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.8) | The current release: everything on this page. Republished under the same tag to add View → Outlines and turn the viewport border off by default. |
 | v3.55.0-titan.7 (withdrawn) | titan.8 without: the Cylinder component, Geom Browser search, keyboard move and rotate (G / R), the ground grid, the anti-aliasing switch, the thicker outline, and the 3D view settings (perspective, grid, anti-aliasing) on by default and saved with each model. Replaced by titan.8. |
 | v3.55.0-titan.6 (withdrawn) | titan.7 without `CHANGES.md` in the zip. Replaced by titan.7. |
 | v3.55.0-titan.5 (withdrawn) | titan.6 without perspective by default, saved with each model. Replaced by titan.6. |
@@ -108,7 +108,8 @@ The whole interface is dark.
 - **Line colours:** new components draw in light grey (#aaa) instead of blue. Cross-section and
   sub-surface lines that were black are #aaa too. The selected component's outline, its active
   cross-section, the active sub-surface, the picking hover highlight and the selected viewport's
-  border are white instead of red. A wing's active-section box stays green. The selection boxes
+  border are white instead of red. That border is off by default (**Window → Border Toggle** turns
+  it on). A wing's active-section box stays green. The selection boxes
   are thinner (3 px, was 4) and half transparent, and a selected component is drawn a little
   brighter: its lines a third of the way to white, its shading lifted slightly. Models keep the
   colours saved in them, so only new components pick up #aaa.

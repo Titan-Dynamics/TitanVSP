@@ -7,6 +7,7 @@ Each new release replaces the previous one, so this is always the latest TitanVS
 ### Recently added
 
 - **Outlines switch:** **View → Outlines** shows or hides the black outlines of every component at once.
+- **No viewport border by default:** the white border round the active viewport is off; **Window → Border Toggle** turns it on.
 - **Cylinder component:** pick **CYLINDER** in the Geom Browser. A closed, flat-ended cylinder set only by **Length** and **Diameter**: no sections, no blending. Fillets treat it as a body.
 - **Geom Browser search:** a *Search...* field over the tree narrows it to the components whose names contain what you type, keeping their parents for context. **Enter** selects the matches. Fast with thousands of components.
 - **Keyboard move and rotate:** with components selected and the mouse over the 3D view, **G** or **R**, then **X**/**Y**/**Z**, a number and **Enter** (`G X 12`, `R Z 90`). The axis is drawn as you type and the change previews live; **Esc** cancels. A hint in the bottom-left corner spells it out. Clicking a component keeps the keyboard on the 3D view.
