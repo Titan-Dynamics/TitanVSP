@@ -930,9 +930,11 @@ void MainVSPScreen::SetView( int view )
         break;
     }
 
+    // Center (C) centres the model and keeps the zoom; the rest frame it too.
     BndBox bbox;
-    bool fit = view != VSPGraphic::Common::VSP_CAM_CENTER && GetFitBndBox( bbox );
-    m_GlWin->AnimateView( static_cast < VSPGraphic::Common::VSPenum > ( view ), fit ? &bbox : nullptr, true, [this, axis]()
+    bool fit = GetFitBndBox( bbox );
+    bool zoom = view != VSPGraphic::Common::VSP_CAM_CENTER;
+    m_GlWin->AnimateView( static_cast < VSPGraphic::Common::VSPenum > ( view ), fit ? &bbox : nullptr, zoom, true, [this, axis]()
     {
         if ( axis && VehicleMgr.GetVehicle()->m_ViewPerspective() )
         {
@@ -1049,7 +1051,7 @@ void MainVSPScreen::FitViewAnimated( bool animate )
     BndBox bbox;
     if ( m_GlWin && GetFitBndBox( bbox ) )
     {
-        m_GlWin->AnimateView( VSPGraphic::Common::VSP_CAM_CENTER, &bbox, animate, nullptr );
+        m_GlWin->AnimateView( VSPGraphic::Common::VSP_CAM_CENTER, &bbox, true, animate, nullptr );
     }
 }
 

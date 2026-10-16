@@ -154,10 +154,11 @@ public:
     void UpdateAllViewParms();
 
     // TitanVSP: turns the selected viewport's camera to a view over a fraction of a second, or
-    // at once without animate.  With fit, it also centres that box and zooms to frame it in the
-    // view; VSP_CAM_CENTER keeps the rotation, so it just fits.  done runs once the camera
-    // arrives, unless another view change or the mouse interrupts it.
-    void AnimateView( VSPGraphic::Common::VSPenum type, const BndBox * fit, bool animate, std::function< void() > done );
+    // at once without animate.  With fit, it also centres that box, and with zoom frames it in the
+    // view; VSP_CAM_CENTER keeps the rotation.  done runs once the camera arrives, unless another
+    // view change or the mouse interrupts it.
+    void AnimateView( VSPGraphic::Common::VSPenum type, const BndBox * fit, bool zoom, bool animate, std::function< void() > done );
+    void AnimateToPose( const VSPGraphic::Camera::Pose & to, double duration, std::function< void() > done );
     void StopViewAnim();
 
 // Private helper functions.
@@ -234,6 +235,7 @@ private:
     VSPGraphic::Camera::Pose m_ViewAnimFrom, m_ViewAnimTo;
     std::chrono::steady_clock::time_point m_ViewAnimStart;
     std::function< void() > m_ViewAnimDone;
+    double m_ViewAnimDuration = 0.35;
 
     //==== TitanVSP: Blanks as balls ====//
     // A Blank has no surface, so it's drawn as a small shaded ball at its origin -- a fixed size on
@@ -245,12 +247,15 @@ private:
     // A grid on the XY plane under the model, fading out at 110% of the model's size.
     void GridDraw( VSPGraphic::Viewport * vp );
 
-    //==== TitanVSP: keyboard move and rotate ====//
-    // As in Blender: G (move) or R (rotate), then X, Y or Z, then a number, then Enter.  The axis
-    // is drawn as a line through the selection, and the change previews as it's typed.  Esc or a
-    // right click cancels; Enter or a left click applies.  No axis, no change.
+    //==== TitanVSP: move and rotate, as Blender's G and R ====//
+    // G (move) or R (rotate), and the mouse drives it: a move in the view's plane, a rotation about
+    // the axis nearest the line of sight.  X, Y or Z holds it to that axis (drawn through the
+    // selection; again to let go), a typed number gives the exact amount, and Ctrl snaps to whole
+    // units or 5 degrees.  Enter or a left click applies; Esc or a right click cancels.
     enum { XF_NONE, XF_MOVE, XF_ROTATE };
     bool XfKey();
+    void XfMouse( int x, int y );
+    void XfCompute( vec3d & move, int & raxis, double & angle );
 
     // TitanVSP: Blender's view keys, on the number row or keypad.  1 Front, 3 Left (nose to the
     // left), 7 Top, with Ctrl the opposite side (Rear, Right, Bottom); keypad 5 toggles perspective.
@@ -261,7 +266,29 @@ private:
     void XfRestore();
     void XfEnd( bool confirm );
     void XfDraw();
-    void XfHintDraw();      // The G/R shortcuts, spelled out in the bottom left corner.
+
+    //==== TitanVSP: Blender's keys for the selection ====//
+    // A / Alt+A select all or none, H / Shift+H / Alt+H hide and show, Z / Shift+Z wireframe or
+    // shaded, Shift+D duplicate, X / Delete delete (asks first).  Main window only, not during G/R.
+    bool BlenderKey();
+    void ToggleWire( bool selected );
+    void DeleteSelection();
+    void DuplicateSelection();
+    void OrbitStep( int key );      // 2 4 6 8 orbit in steps; 9 looks from the other side.
+    vector< std::pair< string, int > > m_ZRevert;  // What Z changed, put back if Z+drag rolls instead.
+    bool m_ZHeld = false;
+    std::chrono::steady_clock::time_point m_ZLast;
+
+    //==== TitanVSP: the shortcuts popup ====//
+    // A keyboard button in the bottom left corner lists the 3D view's keys.  A click elsewhere,
+    // the button again, or Esc closes it.
+    void KeysDraw();
+    bool KeysIconHit( int x, int y );
+    bool KeysPanelHit( int x, int y );
+    bool m_KeysOpen = false;
+    bool m_KeysHover = false;
+    int m_KeysIcon[4] = { 0, 0, 0, 0 };     // x, y, w, h in window pixels from the bottom left.
+    int m_KeysPanel[4] = { 0, 0, 0, 0 };
 
     int m_XfMode;
     int m_XfAxis;
@@ -272,6 +299,15 @@ private:
     vector< vec3d > m_XfStartLoc;
     vector< vec3d > m_XfStartRot;
     vector< Matrix4d > m_XfAttachInv;
+    GizmoFrame m_XfFrame;               // The selection on screen when G / R started.
+    bool m_XfFrameOK = false;
+    glm::vec2 m_XfMouse0, m_XfMouseNow, m_XfMousePrev;
+    double m_XfAngle = 0.0;             // The mouse's turn round the selection, degrees, CCW.
+    int m_XfRotAxis = 2;                // Rotation axis with none held: the one nearest the line of sight.
+    double m_XfRotSign[3] = { 1.0, 1.0, 1.0 };
+    bool m_XfMoved = false;
+    bool m_XfSnap = false;
+    glm::vec2 m_HoverPos = glm::vec2( 0.0f );   // The mouse over the view, window pixels.
     string BlankHit( int x, int y );
     bool m_ClickCandidate;
     int m_ClickX, m_ClickY;

@@ -1516,6 +1516,46 @@ void ManageGeomScreen::SetSelection( const vector< string > & geom_ids )
     m_ScreenMgr->SetUpdateFlag( true );
 }
 
+void ManageGeomScreen::KeySelectAll()
+{
+    SelectAll();
+    m_ScreenMgr->SetUpdateFlag( true );
+}
+
+void ManageGeomScreen::KeyHide( bool others )
+{
+    if ( others )
+    {
+        m_VehiclePtr->NoShowSet( SET_ALL );
+    }
+    NoShowActiveGeoms( !others );
+    m_ScreenMgr->SetUpdateFlag( true );
+}
+
+void ManageGeomScreen::KeyShowAll()
+{
+    vector< string > sel = m_VehiclePtr->GetActiveGeomVec();
+    vector< Geom* > hidden;
+    for ( Geom* g : m_VehiclePtr->FindGeomVec( m_VehiclePtr->GetGeomVec() ) )
+    {
+        if ( g && !g->GetSetFlag( SET_SHOWN ) )
+        {
+            hidden.push_back( g );
+            if ( std::find( sel.begin(), sel.end(), g->GetID() ) == sel.end() )
+            {
+                sel.push_back( g->GetID() );
+            }
+        }
+    }
+    for ( Geom* g : hidden )
+    {
+        g->SetSetFlag( SET_SHOWN, true );
+        g->SetSetFlag( SET_NOT_SHOWN, false );
+    }
+    SetSelection( sel );
+    LoadBrowser();
+}
+
 void ManageGeomScreen::TriggerPickSwitch()
 {
     m_PickButton.GetFlButton()->value( !m_PickButton.GetFlButton()->value() );

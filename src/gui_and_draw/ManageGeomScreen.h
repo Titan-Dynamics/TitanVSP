@@ -113,6 +113,12 @@ public:
     void SetClickPick( bool pick )          { m_ClickPick = pick; }
     void SetSelection( const vector< string > & geom_ids );
 
+    // TitanVSP: Blender's keys in the 3D view (VspGlWindow::BlenderKey), done as the browser's own
+    // buttons do them.
+    void KeySelectAll();                // A: Sel All.
+    void KeyHide( bool others );        // H: NoShow.  Shift+H: Show Only.
+    void KeyShowAll();                  // Alt+H: shows everything; what it reveals joins the selection.
+
 protected:
 
     bool m_ClickPick;

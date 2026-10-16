@@ -6,13 +6,14 @@ Each new release replaces the previous one, so this is always the latest TitanVS
 
 ### Recently added
 
+- **Blender's keys and a shortcuts popup:** **G**/**R** now follow the mouse (**X**/**Y**/**Z** to hold an axis, a number for an exact amount, **Ctrl** to snap), plus **Shift+D** duplicate, **X**/**Delete** delete (asks first), **A**/**Alt+A** select all or none, **H**/**Shift+H**/**Alt+H** hide and show, **Z**/**Shift+Z** wireframe or shaded, **2 4 6 8** orbit, **9** other side, **Home** / numpad **.** fit, **C** centre, and **Ctrl**+click to add to the selection. A keyboard button in the 3D view's corner lists them all.
 - **Outlines switch:** **View → Outlines** shows or hides the black outlines of every component at once.
 - **Auto perspective, as in Blender:** Top, Front, Left, Bottom, Rear and Right (**F5**–**F7**, **F9**–**F11**) show orthographic; orbit the view and it goes back to perspective, if it was. Blender's view keys work too: **1** Front, **3** Left (nose to the left), **7** Top, **Ctrl** for the opposite side, keypad **5** for perspective.
 - **Animated view changes:** View menu views and the view keys turn the camera smoothly, centring and framing the model, then switch to orthographic for axis views. **F** (Fit On Screen) animates too, and opening a file frames its model. Click or scroll to stop an animation.
 - **No viewport border by default:** the white border round the active viewport is off; **Window → Border Toggle** turns it on.
 - **Cylinder component:** pick **CYLINDER** in the Geom Browser. A closed, flat-ended cylinder set only by **Length** and **Diameter**: no sections, no blending. Fillets treat it as a body.
 - **Geom Browser search:** a *Search...* field over the tree narrows it to the components whose names contain what you type, keeping their parents for context. **Enter** selects the matches. Fast with thousands of components.
-- **Keyboard move and rotate:** with components selected and the mouse over the 3D view, **G** or **R**, then **X**/**Y**/**Z**, a number and **Enter** (`G X 12`, `R Z 90`). The axis is drawn as you type and the change previews live; **Esc** cancels. A hint in the bottom-left corner spells it out. Clicking a component keeps the keyboard on the 3D view.
+- **Keyboard move and rotate:** with components selected and the mouse over the 3D view, **G** or **R**, then **X**/**Y**/**Z**, a number and **Enter** (`G X 12`, `R Z 90`). The axis is drawn as you type and the change previews live; **Esc** cancels. Clicking a component keeps the keyboard on the 3D view.
 - **Ground grid:** **View → Grid** shows a grid on the XY plane under the model, fading out around it, with the X and Y axes in red and green.
 - **Anti-aliasing:** **View → Anti-aliasing** smooths lines in the 3D view; the black edge outline is thicker.
 - **View settings per model:** Perspective, Grid, Anti-aliasing and Outlines are on for new models, and each model saves its own.
@@ -21,7 +22,7 @@ Each new release replaces the previous one, so this is always the latest TitanVS
 
 - **Perspective view:** **View → Perspective** (key **5**), keeping the same framing.
 - **CHANGES.md in the zip:** the full list of TitanVSP's changes ships alongside README.md.
-- **Click to select:** click a component in the 3D view to select it; **Shift**+click adds or removes it; click empty space to clear the selection. Dragging still turns the view.
+- **Click to select:** click a component in the 3D view to select it; **Shift**+click or **Ctrl**+click adds or removes it; click empty space to clear the selection. Dragging still turns the view.
 - **Move arrows:** a selected component shows Blender-style red, green and blue arrows at its origin. Drag one to move the selection along X, Y or Z, in whole units. Undo puts it back.
 - **Selection look:** the selected component is drawn a little brighter, inside a thinner (3 px), half-transparent box.
 - **Blanks as balls:** Blank components show as small half-transparent balls, the same size on screen at any zoom, ringed when selected and hidden behind parts in front of them. Click one to select it.

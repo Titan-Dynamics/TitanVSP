@@ -173,6 +173,9 @@ public:
     vector< string > PasteClipboard();
     bool IDinClipboard( const string & id );
     vector< string > CopyGeomVec( const vector<string> & geom_vec );
+    // TitanVSP: copies of these Geoms in place, each under its original's parent (or under the copy
+    // of its parent, when that's copied too).  The clipboard is left alone.  Shift+D.
+    vector< string > DuplicateGeomVec( const vector< string > & geom_vec );
 
     // Replaces a Fuselage with a Stack of the same shape, in the Fuselage's place in the tree
     // and under its ID.  Returns that ID, or an empty string if it cannot be converted.

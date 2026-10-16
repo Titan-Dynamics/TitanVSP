@@ -37,7 +37,7 @@ Releases made by hand, before the workflow:
 
 | Release | What's in it |
 | --- | --- |
-| [v3.55.0-titan.8](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.8) | The current release: everything on this page. Republished under the same tag to add View → Outlines, the viewport border off by default, auto perspective, Blender's view keys, animated view changes and Fit On Screen, and framing a model on opening it. |
+| [v3.55.0-titan.8](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.8) | The current release: everything on this page. Republished under the same tag to add View → Outlines, the viewport border off by default, auto perspective, Blender's view keys, animated view changes and Fit On Screen, framing a model on opening it, and Blender's selection keys with the shortcuts popup. |
 | v3.55.0-titan.7 (withdrawn) | titan.8 without: the Cylinder component, Geom Browser search, keyboard move and rotate (G / R), the ground grid, the anti-aliasing switch, the thicker outline, and the 3D view settings (perspective, grid, anti-aliasing) on by default and saved with each model. Replaced by titan.8. |
 | v3.55.0-titan.6 (withdrawn) | titan.7 without `CHANGES.md` in the zip. Replaced by titan.7. |
 | v3.55.0-titan.5 (withdrawn) | titan.6 without perspective by default, saved with each model. Replaced by titan.6. |
@@ -142,7 +142,7 @@ was left. They're the Vehicle's `Perspective`, `Grid`, `Antialias` and `Outlines
 `ViewSettings` group.
 
 **Click to select.** Clicking a component in the 3D view selects it, as if picked in the Geom
-Browser, and opens its window. **Shift**+click adds it to the selection, or takes it out; clicking
+Browser, and opens its window. **Shift**+click or **Ctrl**+click adds it to the selection, or takes it out; clicking
 empty space clears the selection. A click is a press and release that hardly moves, so dragging
 to turn the view works as before, anywhere. It uses the same picking as the Geom Browser's
 **Pick** button, but only for the click, so nothing highlights as the mouse passes over.
@@ -153,20 +153,46 @@ screen whatever the zoom or window, with a white ring round it when selected. Cl
 selects the Blank. Parts in front of a Blank hide its ball, as they hide each other. The Geom
 Browser's **Pick** mode still picks Blanks by their (now invisible) triad.
 
-**Keyboard move and rotate.** As in Blender, with components selected and the mouse over the 3D
-view: **G** (move) or **R** (rotate), then **X**, **Y** or **Z**, then a number, then **Enter**.
-`G X 12` moves the selection 12 units along X; `R X 45` rotates it 45° about X. Choosing an axis
-draws it as a line through the selection in its colour, a prompt in the top-left corner shows
-what's being typed, and the change previews as you type (`-` flips the sign, Backspace deletes).
-**Enter** or a left click applies it; **Esc** or a right click cancels. Without an axis nothing
-changes. Pressing **G** or **R** again switches between move and rotate. Selecting a component
+**Move and rotate (G / R).** As in Blender, with components selected and the mouse over the 3D
+view, **G** moves and **R** rotates the selection, following the mouse: a move slides it in the
+view's plane, and a rotation turns it about the model axis nearest the line of sight as the mouse
+goes round it. **X**, **Y** or **Z** holds it to that axis, drawn through the selection in its
+colour (the same key again lets go). Typing a number gives the exact amount: `G X 12` moves the
+selection 12 units along X, `R Z 90` turns it 90° about Z (`-` flips the sign, Backspace deletes;
+with no axis held, a number moves along X or turns about the line-of-sight axis). **Ctrl** snaps
+the mouse to whole units or 5°. A prompt in the top-left corner shows the amount and the change
+previews live. **Enter** or a left click applies it; **Esc** or a right click cancels. Pressing
+**G** or **R** again switches between move and rotate. Selecting a component
 by clicking it keeps the keyboard on the 3D view, so G and R work straight away even though its
 window opens. A move is along the
 model's axis, as with the move arrows; a rotation adds to that axis's rotation (X/Y/Z Rotation,
 or Rel Rotation for a component placed relative to its parent). One undo puts it back. With nothing
 selected, **R** still sets the rotation center (View → Set Rotation Center). **View → View Front Of** no longer has
-the **X** shortcut, which belongs to the move and rotate; it's still in the View menu. Two dim lines in the bottom-left corner of the 3D view spell out the
-G and R shortcuts.
+the **X** shortcut, which belongs to the move and rotate; it's still in the View menu.
+
+**Blender's other keys.** With the mouse over the 3D view (or the keyboard on it):
+
+- **A** selects every component and **Alt+A** none.
+- **H** hides the selection, **Shift+H** everything else, and **Alt+H** shows everything; the
+  components it reveals join the selection.
+- **Z** switches the selection between wireframe and shaded, and **Shift+Z** every component
+  (shaded if every shown one is wireframe, otherwise wireframe). Components drawn as None stay
+  that way. Holding Z to roll the view (Z + drag) puts the drawing back as it was.
+- **Shift+D** duplicates the selection in place, each copy under its original's parent (or under
+  the copy of its parent when that's duplicated too), and starts moving the copies with G; Esc
+  leaves them on top of the originals. The clipboard is untouched.
+- **X** or **Delete** deletes the selection after asking, then as Edit → Delete does (which asks
+  about clones).
+- **2** / **8** tip the view down and up and **4** / **6** turn it about the vertical axis, 15° a
+  step, and **9** looks from the other side, all animated. **Home** and numpad **.** fit the
+  model, like **F**, and **C** (View → Center) now centres the visible model without changing
+  the zoom: it makes the model's centre the centre of rotation, animated. Upstream's C only reset
+  the pan. **Shift+C** (View → Center All) is still upstream's, resetting the pan in every
+  viewport.
+
+**Shortcuts popup.** A keyboard button in the bottom-left corner of the 3D view opens a list of
+all these keys, grouped as Select and show, Move and rotate, and View. A click elsewhere, the
+button again or Esc closes it. It replaces the two lines of G and R hints that were there.
 
 **Move arrows.** Selecting components shows Blender-style move arrows at their origin: red X, green
 Y and blue Z, at a fixed size on screen, drawn over the model. Drag an arrow with the left mouse

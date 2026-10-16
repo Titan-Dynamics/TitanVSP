@@ -33,7 +33,7 @@ previous one, so there's only ever one: the latest.
 | --- | --- |
 | **Geometry** | A **Fillet** component: smooth, watertight rolling-ball fillets at wing roots and wherever two bodies meet. A plain **Cylinder** component set by just its length and diameter. |
 | **Interface** | A dark theme throughout, including title bars and the 3D view; light component lines, with the selected component drawn brighter inside a thin white box; the Titan Dynamics logo in the 3D view. |
-| **3D view** | Click a component to select it, and Blender-style move arrows to drag it along X, Y or Z in whole units, or type **G**/**R**, an axis and a number to move or rotate it exactly. Blanks shown as balls. An orthographic/perspective switch (**View → Perspective**, key **5**) that keeps the framing, Blender's view keys (**1**/**3**/**7**) with axis views shown orthographic, a ground grid, anti-aliasing, and a switch to hide every component's outlines. |
+| **3D view** | Click a component to select it, and Blender-style move arrows to drag it along X, Y or Z in whole units, or Blender's keys: **G**/**R** to move or rotate with the mouse (an axis and a number for exact amounts), **Shift+D** to duplicate, **A**/**H**/**Z** to select, hide and switch wireframe, **X** to delete. A keyboard button in the corner lists them all. Blanks shown as balls. An orthographic/perspective switch (**View → Perspective**, key **5**) that keeps the framing, Blender's view keys (**1**/**3**/**7**) with axis views shown orthographic, a ground grid, anti-aliasing, and a switch to hide every component's outlines. |
 | **Geom Browser** | A search field that narrows the tree to matching components and selects them. |
 | **Files** | The system Open and Save dialogs by default. OpenVSP already offers them as a preference; TitanVSP only makes them the default. |
 | **VSPAERO results** | Results Manager plots you can drag to pan, wheel to zoom, and hover to read x and y, with light x = 0 and y = 0 axes. |
@@ -227,13 +227,24 @@ logo sits in the top-right corner of the 3D view, behind the model.
 
 ### Selecting and moving components in the 3D view
 
-Click a component in the 3D view to select it; **Shift**+click adds it to the selection or takes
-it out, and clicking empty space clears the selection. Dragging still turns the view. Blanks show
-as small balls, ringed when selected; click one to select it.
+Click a component in the 3D view to select it; **Shift**+click or **Ctrl**+click adds it to the
+selection or takes it out, and clicking empty space clears the selection. Dragging still turns the
+view. Blanks show as small balls, ringed when selected; click one to select it.
 
-With components selected and the mouse over the 3D view, type **G** (move) or **R** (rotate),
-then **X**, **Y** or **Z**, then a number, then **Enter**: `G X 12` moves 12 units along X, `R X 45`
-rotates 45° about X. **Esc** cancels.
+The 3D view takes Blender's keys. Click the keyboard button in its bottom-left corner for the full
+list:
+
+| Keys | What they do |
+| --- | --- |
+| **G** / **R** | Move or rotate the selection with the mouse. **X**, **Y** or **Z** holds it to that axis; a typed number gives the exact amount (`G X 12`, `R Z 90`); **Ctrl** snaps to whole units or 5°. **Enter** or a click applies, **Esc** or a right-click cancels. |
+| **Shift+D** | Duplicate the selection in place, then move the copies. |
+| **X** / **Delete** | Delete the selection, after asking. |
+| **A** / **Alt+A** | Select all / none. |
+| **H** / **Shift+H** / **Alt+H** | Hide the selection / hide everything else / show everything. |
+| **Z** / **Shift+Z** | Wireframe or shaded: the selection / every component. |
+| **1** / **3** / **7** | Front / left / top views (**Ctrl**: the other side). |
+| **5** · **2 4 6 8** · **9** | Perspective / orthographic · orbit in steps · look from the other side. |
+| **F** / **Home** / numpad **.** · **C** | Fit the model · centre it, keeping the zoom. |
 
 Select a component and move arrows appear at its origin, as in Blender: red X, green Y, blue Z.
 Drag an arrow to move the component along that axis; it moves in whole units. With several

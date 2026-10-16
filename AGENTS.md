@@ -267,17 +267,56 @@ rotates and nothing highlights on hover. `ManageGeomScreen::SetSelection` applie
 timeouts) re-activates the main window (`SetForegroundWindow`) and gives the GL window FLTK focus,
 since showing the geom screen takes the keyboard; geom screens are `set_non_modal`, so they stay
 above the main window. `handle()` offers `FL_KEYDOWN`, and
-`FL_SHORTCUT` with the mouse inside the window, to `XfKey` first. G/R start `XfBegin` when
-`GizmoGeoms()` (selected, location settable) isn't empty, recording each component's start
-location and rotation (Rel or Abs, matching its mode) and taking keyboard focus. While active,
-every key is consumed: X/Y/Z set the axis, digits/`.`/`-`/Backspace edit `m_XfText`, Enter
-applies, Esc cancels; key-ups are swallowed too, including the cancelling Esc, which
+`FL_SHORTCUT` with the mouse inside the window, to `XfKey` first, then `ViewKey`, then
+`BlenderKey`. G/R start `XfBegin` when `GizmoGeoms()` (selected, location settable) isn't empty,
+recording each component's start location and rotation (Rel or Abs, matching its mode), the
+mouse (`m_HoverPos`, kept up to date on `FL_MOVE`/`FL_PUSH`), the selection's `GizmoFrame` at the
+start (`m_XfFrame`) and the rotation axis for no axis held (`m_XfRotAxis`, the world axis with the
+largest camera-z component, with `m_XfRotSign` so anticlockwise on screen is positive about an
+axis pointing at the viewer), and taking keyboard focus. `FL_MOVE` goes to `XfMouse`, which adds
+up the mouse's turn round the selection (`m_XfAngle`) and previews. `XfCompute` gives the amount:
+typed (`m_XfText` with an axis) wins; else a move along a held axis is the mouse's travel along
+it over its pixels per unit, and with none the least-norm solution of `J w = d`, `J`'s columns
+being each axis's screen direction times its pixels per unit (the move in the view plane); a
+rotation is `m_XfAngle * m_XfRotSign`. Ctrl (`m_XfSnap`, from key down/up and the mouse's state)
+rounds to units or 5°. While active, every key is consumed: X/Y/Z set the axis (again to clear),
+digits/`.`/`-`/Backspace edit `m_XfText` (picking X or the line-of-sight axis if none is held),
+Enter applies, Esc cancels; key-ups are swallowed too, including the cancelling Esc, which
 `OnKeyup` would otherwise use to clear the selection. A mouse press applies (left) or cancels.
 `XfApply` previews with `SetFromDevice( val, true )` (no undo); `XfEnd` restores the start values
-without undo, then applies the final value with `drag_flag` false so undo returns to the start.
+without undo, then, if something was typed or the mouse moved, applies the final value with
+`drag_flag` false so undo returns to the start.
 Moves go along the model axis (Rel components through the inverse attach rotation, as the
 gizmo); rotations add to that axis's X/Y/Z Rot or RelRot. `XfDraw` draws the axis line from
 `GizmoGetFrame` and a `gl_draw` prompt; `<FL/gl.h>` must be included after GLEW.
+
+## Blender's keys and the shortcuts popup
+
+`VspGlWindow::BlenderKey` (`MainGLWindow.cpp`), main window only, not during G/R or picking, no
+Ctrl/Meta. A / Alt+A, H / Shift+H / Alt+H go through `ManageGeomScreen`'s `KeySelectAll`,
+`KeyHide` (NoShow, or `NoShowSet( SET_ALL )` then show the selection, as Show Only) and
+`KeyShowAll` (hidden components join the selection, then are shown), and `SetSelection`. Z /
+Shift+Z: `ToggleWire` sets `m_GuiDraw` draw types, remembering the old ones in `m_ZRevert`;
+`OnDrag`'s Z-roll branch puts them back, since Z + drag rolls the view. Z also sets `m_prevKey`
+(`OnKeydown` isn't reached), and key repeat is ignored while `m_ZHeld` and the last Z was under
+0.6 s ago (the key-up may not arrive without focus). Shift+D: `Vehicle::DuplicateGeomVec` (from
+WebVSP: `CopyGeomVec`, then each copy under its original's parent unless its parent was copied
+too), select the copies, `XfBegin( XF_MOVE )`. X / Delete: `fl_choice`, then
+`DeleteOrCutActiveGeomVec( veh, false )`. `ViewKey` also has 2 4 6 8 9 (`OrbitStep`: 4/6 rotate
+the camera's `Pose::rot` about world Z on the right, 8/2 about camera X on the left, 9 by 180°
+about camera Y; `AnimateToPose`, building on the target of an animation in progress so steps add
+up; all but 9 end the snapped ortho), Home and numpad `.` (`FitViewAnimated`). C (View → Center)
+calls `AnimateView( CENTER, box, zoom = false )`: centres the visible box, keeps the zoom.
+Ctrl+click toggles like Shift+click (`m_ClickCandidate` allows Ctrl; a Ctrl drag still zooms).
+
+The popup: `KeysDraw` (in place of the old hint lines, after `XfDraw`) draws a keyboard button at
+the bottom left and, when `m_KeysOpen`, the list from `KeySections()` in a panel above it, three
+sections side by side when they fit the window, else stacked. `gl_width` measures in FLTK units
+while `gl_draw` text is ppu times bigger in pixels, so widths are multiplied by
+`pixels_per_unit()`. `m_KeysIcon` / `m_KeysPanel` hold the rectangles for `KeysIconHit` /
+`KeysPanelHit`: `FL_PUSH` on the button toggles it; any click while open closes it (and is used
+up if on the panel); Esc closes it (its key-up swallowed, or it would clear the selection).
+`FL_MOVE` lights the button on hover. Keep `KeySections()` in step with the keys.
 
 ## Ground grid
 

@@ -31,6 +31,7 @@
 #include "ManageBackground3DScreen.h"
 #include "ManageCORScreen.h"
 #include "ManageGeomScreen.h"
+#include "CloneDeleteDialog.h"
 #include "ManageLightingScreen.h"
 #include "ManageMeasureScreen.h"
 #include "ManageViewScreen.h"
@@ -61,6 +62,7 @@
 #include "WaveDragScreen.h"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <FL/fl_ask.H>
 #include <FL/gl.h>      // gl_draw, for the move/rotate prompt.  After GLEW.
 #include <FL/platform.H>
 
@@ -211,7 +213,7 @@ void VspGlWindow::draw()
 
     GizmoDraw();
     XfDraw();
-    XfHintDraw();
+    KeysDraw();
 }
 
 int VspGlWindow::handle( int fl_event )
@@ -247,6 +249,23 @@ int VspGlWindow::handle( int fl_event )
 
     case FL_PUSH:
         m_ClickCandidate = false;
+        m_HoverPos = glm::vec2( x, y );
+        // The shortcuts button, and a click anywhere else while its list is open closes it.
+        if ( KeysIconHit( x, y ) )
+        {
+            m_KeysOpen = !m_KeysOpen;
+            redraw();
+            return 1;
+        }
+        if ( m_KeysOpen )
+        {
+            m_KeysOpen = false;
+            redraw();
+            if ( KeysPanelHit( x, y ) )
+            {
+                return 1;
+            }
+        }
         if ( m_XfMode != XF_NONE )
         {
             // While typing a move or rotate: left click applies it, any other button cancels.
@@ -257,8 +276,9 @@ int VspGlWindow::handle( int fl_event )
         {
             return 1;
         }
+        // Ctrl as well as Shift adds or takes away, as in Blender; a Ctrl drag still zooms.
         m_ClickCandidate = m_LinkedScreen == DrawObj::VSP_MAIN_SCREEN && Fl::event_button() == FL_LEFT_MOUSE &&
-                           !Fl::event_state( FL_CTRL | FL_ALT | FL_META ) && !m_GEngine->getScene()->isPickingEnabled();
+                           !Fl::event_state( FL_ALT | FL_META ) && !m_GEngine->getScene()->isPickingEnabled();
         m_ClickX = x;
         m_ClickY = y;
         OnPush( x, y );
@@ -287,7 +307,7 @@ int VspGlWindow::handle( int fl_event )
         if ( m_ClickCandidate && Fl::event_button() == FL_LEFT_MOUSE )
         {
             m_ClickCandidate = false;
-            ClickSelect( m_ClickX, m_ClickY, Fl::event_state( FL_SHIFT ) != 0 );
+            ClickSelect( m_ClickX, m_ClickY, Fl::event_state( FL_SHIFT | FL_CTRL ) != 0 );
         }
         return 1;
 
@@ -296,6 +316,17 @@ int VspGlWindow::handle( int fl_event )
         return 1;
 
     case FL_MOVE:
+        m_HoverPos = glm::vec2( x, y );
+        if ( m_XfMode != XF_NONE )
+        {
+            XfMouse( x, y );
+            return 1;
+        }
+        if ( m_LinkedScreen == DrawObj::VSP_MAIN_SCREEN && KeysIconHit( x, y ) != m_KeysHover )
+        {
+            m_KeysHover = !m_KeysHover;
+            redraw();
+        }
         if( m_GEngine->getScene()->isPickingEnabled() )
         {
             redraw();
@@ -312,7 +343,7 @@ int VspGlWindow::handle( int fl_event )
         return 1;
 
     case FL_KEYDOWN:
-        if ( XfKey() || ViewKey() )
+        if ( XfKey() || ViewKey() || BlenderKey() )
         {
             return 1;
         }
@@ -324,13 +355,23 @@ int VspGlWindow::handle( int fl_event )
         {
             return 1;
         }
-        if ( Fl::event_inside( this ) && ViewKey() )
+        if ( Fl::event_inside( this ) && ( ViewKey() || BlenderKey() ) )
         {
             return 1;
         }
         break;
 
     case FL_KEYUP:
+        if ( Fl::event_key() == 'z' )
+        {
+            m_ZHeld = false;
+        }
+        if ( m_XfMode != XF_NONE && ( Fl::event_key() == FL_Control_L || Fl::event_key() == FL_Control_R ) )
+        {
+            m_XfSnap = false;
+            XfApply( false );
+            redraw();
+        }
         if ( m_XfMode != XF_NONE || m_XfSwallowKeyUp )
         {
             // The keys belong to the move or rotate, including the Esc that cancelled it, which
@@ -2636,6 +2677,21 @@ void VspGlWindow::OnDrag( int x, int y )
                 display->rotateZ( ( int )m_prevZLB.x, ( int )m_prevZLB.y, x, y );
                 UpdateRotationParms();
                 EndSnapOrtho();
+                // Z was held to roll the view, not to switch wireframe: undo the switch.
+                if ( !m_ZRevert.empty() )
+                {
+                    Vehicle * veh = VehicleMgr.GetVehicle();
+                    for ( const auto & r : m_ZRevert )
+                    {
+                        Geom * g = veh ? veh->FindGeom( r.first ) : nullptr;
+                        if ( g )
+                        {
+                            g->m_GuiDraw.SetDrawType( r.second );
+                        }
+                    }
+                    m_ZRevert.clear();
+                    m_ScreenMgr->SetUpdateFlag( true );
+                }
             }
             m_prevZLB = glm::vec2( x, y );
         }
@@ -3300,7 +3356,7 @@ void VspGlWindow::GizmoDraw()
 
 //==== TitanVSP: animated view changes ====//
 
-void VspGlWindow::AnimateView( VSPGraphic::Common::VSPenum type, const BndBox * fit, bool animate, std::function< void() > done )
+void VspGlWindow::AnimateView( VSPGraphic::Common::VSPenum type, const BndBox * fit, bool zoom, bool animate, std::function< void() > done )
 {
     VSPGraphic::Display * display = m_GEngine->getDisplay();
     VSPGraphic::Viewport * vp = display ? display->getViewport() : nullptr;
@@ -3343,12 +3399,12 @@ void VspGlWindow::AnimateView( VSPGraphic::Common::VSPenum type, const BndBox * 
         }
         // Zoom is model units per pixel; leave a margin round the model.
         float z = 1.15f * std::max( 2.0f * hx / vp->width(), 2.0f * hy / vp->height() );
-        if ( z > 0.0f && std::isfinite( z ) )
+        if ( zoom && z > 0.0f && std::isfinite( z ) )
         {
             cam->relativeZoom( z );
         }
     }
-    m_ViewAnimTo = cam->getPose();
+    VSPGraphic::Camera::Pose to = cam->getPose();
     if ( !animate )
     {
         UpdateAllViewParms();
@@ -3360,10 +3416,27 @@ void VspGlWindow::AnimateView( VSPGraphic::Common::VSPenum type, const BndBox * 
         return;
     }
     cam->setPose( from );
+    AnimateToPose( to, 0.35, done );
+}
 
-    m_ViewAnimFrom = from;
+// Moves the selected viewport's camera from where it is to 'to' over duration seconds.
+void VspGlWindow::AnimateToPose( const VSPGraphic::Camera::Pose & to, double duration, std::function< void() > done )
+{
+    StopViewAnim();
+    VSPGraphic::Camera * cam = m_GEngine->getDisplay() ? m_GEngine->getDisplay()->getCamera() : nullptr;
+    if ( !cam )
+    {
+        if ( done )
+        {
+            done();
+        }
+        return;
+    }
+    m_ViewAnimFrom = cam->getPose();
+    m_ViewAnimTo = to;
     m_ViewAnimCam = cam;
     m_ViewAnimDone = done;
+    m_ViewAnimDuration = duration;
     m_ViewAnimStart = std::chrono::steady_clock::now();
     m_ViewAnim = true;
     Fl::add_timeout( 1.0 / 60.0, ViewAnimCB, this );
@@ -3398,8 +3471,7 @@ void VspGlWindow::ViewAnimCB( void * data )
         return;
     }
 
-    const double duration = 0.35;
-    double t = std::chrono::duration< double >( std::chrono::steady_clock::now() - win->m_ViewAnimStart ).count() / duration;
+    double t = std::chrono::duration< double >( std::chrono::steady_clock::now() - win->m_ViewAnimStart ).count() / win->m_ViewAnimDuration;
     if ( t >= 1.0 )
     {
         cam->setPose( win->m_ViewAnimTo );
@@ -3420,6 +3492,523 @@ void VspGlWindow::ViewAnimCB( void * data )
     cam->setPose( VSPGraphic::Camera::blendPose( win->m_ViewAnimFrom, win->m_ViewAnimTo, e ) );
     win->redraw();
     Fl::repeat_timeout( 1.0 / 60.0, ViewAnimCB, data );
+}
+
+//==== TitanVSP: Blender's keys for the selection and the view ====//
+
+namespace
+{
+ManageGeomScreen * GeomBrowser( ScreenMgr * mgr )
+{
+    return dynamic_cast< ManageGeomScreen * >( mgr->GetScreen( vsp::VSP_MANAGE_GEOM_SCREEN ) );
+}
+}
+
+bool VspGlWindow::BlenderKey()
+{
+    if ( m_LinkedScreen != DrawObj::VSP_MAIN_SCREEN || m_XfMode != XF_NONE || !m_GEngine )
+    {
+        return false;
+    }
+
+    int key = Fl::event_key();
+    if ( m_KeysOpen && key == FL_Escape )
+    {
+        m_KeysOpen = false;
+        m_XfSwallowKeyUp = true;    // Esc's key-up would clear the selection.
+        redraw();
+        return true;
+    }
+    if ( Fl::event_state( FL_CTRL | FL_META ) || m_GEngine->getScene()->isPickingEnabled() )
+    {
+        return false;
+    }
+    bool shift = Fl::event_state( FL_SHIFT ) != 0;
+    bool alt = Fl::event_state( FL_ALT ) != 0;
+    ManageGeomScreen * browser = GeomBrowser( m_ScreenMgr );
+    if ( !browser )
+    {
+        return false;
+    }
+
+    switch ( key )
+    {
+    case 'a':
+        if ( shift )
+        {
+            return false;
+        }
+        if ( alt )
+        {
+            browser->SetSelection( vector< string >() );
+        }
+        else
+        {
+            browser->KeySelectAll();
+        }
+        break;
+    case 'h':
+        if ( alt && shift )
+        {
+            return false;
+        }
+        if ( alt )
+        {
+            browser->KeyShowAll();
+        }
+        else
+        {
+            browser->KeyHide( shift );
+        }
+        break;
+    case 'z':
+    {
+        if ( alt )
+        {
+            return false;
+        }
+        // Held down, Z repeats; only a fresh press switches.  Z also rolls the view while
+        // dragging, so it's noted as the key held (OnKeydown isn't reached).
+        m_prevKey = 'z';
+        auto now = std::chrono::steady_clock::now();
+        bool repeat = m_ZHeld && std::chrono::duration< double >( now - m_ZLast ).count() < 0.6;
+        m_ZLast = now;
+        m_ZHeld = true;
+        if ( !repeat )
+        {
+            ToggleWire( !shift );
+        }
+        return true;
+    }
+    case 'd':
+        if ( !shift || alt )
+        {
+            return false;
+        }
+        DuplicateSelection();
+        return true;
+    case 'x':
+    case FL_Delete:
+        if ( shift || alt )
+        {
+            return false;
+        }
+        DeleteSelection();
+        return true;
+    default:
+        return false;
+    }
+    m_ScreenMgr->SetUpdateFlag( true );
+    return true;
+}
+
+// Z: the selection wireframe, or shaded when it's all wireframe already.  Shift+Z: the same for
+// every component, judged by the shown ones.  Components drawn as None stay that way.
+void VspGlWindow::ToggleWire( bool selected )
+{
+    Vehicle * veh = VehicleMgr.GetVehicle();
+    if ( !veh )
+    {
+        return;
+    }
+    vector< Geom * > geoms;
+    for ( Geom * g : veh->FindGeomVec( selected ? veh->GetActiveGeomVec() : veh->GetGeomVec() ) )
+    {
+        if ( g && g->m_GuiDraw.GetDrawType() != vsp::DRAW_TYPE::GEOM_DRAW_NONE )
+        {
+            geoms.push_back( g );
+        }
+    }
+    if ( geoms.empty() )
+    {
+        return;
+    }
+    bool all_wire = true;
+    bool any_judged = false;
+    for ( Geom * g : geoms )
+    {
+        if ( !selected && !g->GetSetFlag( vsp::SET_SHOWN ) )
+        {
+            continue;
+        }
+        any_judged = true;
+        all_wire = all_wire && g->m_GuiDraw.GetDrawType() == vsp::DRAW_TYPE::GEOM_DRAW_WIRE;
+    }
+    if ( !any_judged )
+    {
+        for ( Geom * g : geoms )
+        {
+            all_wire = all_wire && g->m_GuiDraw.GetDrawType() == vsp::DRAW_TYPE::GEOM_DRAW_WIRE;
+        }
+    }
+    m_ZRevert.clear();
+    for ( Geom * g : geoms )
+    {
+        m_ZRevert.push_back( std::make_pair( g->GetID(), g->m_GuiDraw.GetDrawType() ) );
+        g->m_GuiDraw.SetDrawType( all_wire ? vsp::DRAW_TYPE::GEOM_DRAW_SHADE : vsp::DRAW_TYPE::GEOM_DRAW_WIRE );
+    }
+    m_ScreenMgr->SetUpdateFlag( true );
+}
+
+// X / Delete: asks first, then deletes as Edit > Delete does (which asks about clones).
+void VspGlWindow::DeleteSelection()
+{
+    Vehicle * veh = VehicleMgr.GetVehicle();
+    if ( !veh )
+    {
+        return;
+    }
+    int n = ( int )veh->GetActiveGeomVec().size();
+    if ( n == 0 )
+    {
+        return;
+    }
+    string what = n == 1 ? string( "the selected component" ) : std::to_string( n ) + " selected components";
+    if ( fl_choice( "Delete %s?", "Cancel", "Delete", nullptr, what.c_str() ) != 1 )
+    {
+        return;
+    }
+    DeleteOrCutActiveGeomVec( veh, false );
+    m_ScreenMgr->SetUpdateFlag( true );
+}
+
+// Shift+D: copies of the selection in place, selected and following the mouse (G).  Esc leaves
+// them where they are, on top of the originals.
+void VspGlWindow::DuplicateSelection()
+{
+    Vehicle * veh = VehicleMgr.GetVehicle();
+    ManageGeomScreen * browser = GeomBrowser( m_ScreenMgr );
+    if ( !veh || !browser || veh->GetActiveGeomVec().empty() )
+    {
+        return;
+    }
+    vector< string > copies = veh->DuplicateGeomVec( veh->GetActiveGeomVec() );
+    if ( copies.empty() )
+    {
+        return;
+    }
+    browser->SetSelection( copies );
+    veh->Update();
+    m_ScreenMgr->SetUpdateFlag( true );
+    if ( !GizmoGeoms().empty() )
+    {
+        XfBegin( XF_MOVE );
+    }
+}
+
+// Blender's numpad: 4 / 6 turn the model about the vertical (Z) axis, 8 / 2 tip the view up or
+// down, 15 degrees a step; 9 looks from the other side.  Steps add up even mid-animation.
+void VspGlWindow::OrbitStep( int key )
+{
+    VSPGraphic::Camera * cam = m_GEngine->getDisplay() ? m_GEngine->getDisplay()->getCamera() : nullptr;
+    if ( !cam )
+    {
+        return;
+    }
+    VSPGraphic::Camera::Pose base = m_ViewAnim ? m_ViewAnimTo : cam->getPose();
+    VSPGraphic::Camera::Pose to = base;
+    const float step = glm::radians( 15.0f );
+    switch ( key )
+    {
+    case '4':
+        to.rot = glm::rotate( base.rot, -step, glm::vec3( 0.0f, 0.0f, 1.0f ) );
+        break;
+    case '6':
+        to.rot = glm::rotate( base.rot, step, glm::vec3( 0.0f, 0.0f, 1.0f ) );
+        break;
+    case '8':
+        to.rot = glm::rotate( glm::mat4( 1.0f ), step, glm::vec3( 1.0f, 0.0f, 0.0f ) ) * base.rot;
+        break;
+    case '2':
+        to.rot = glm::rotate( glm::mat4( 1.0f ), -step, glm::vec3( 1.0f, 0.0f, 0.0f ) ) * base.rot;
+        break;
+    case '9':
+        to.rot = glm::rotate( glm::mat4( 1.0f ), glm::pi< float >(), glm::vec3( 0.0f, 1.0f, 0.0f ) ) * base.rot;
+        break;
+    default:
+        return;
+    }
+    AnimateToPose( to, key == '9' ? 0.35 : 0.15, nullptr );
+    // Turning off an axis view goes back to perspective; the other side of one is still one.
+    if ( key != '9' )
+    {
+        EndSnapOrtho();
+    }
+}
+
+//==== TitanVSP: the shortcuts popup ====//
+
+namespace
+{
+struct KeyRow
+{
+    const char * keys;
+    const char * what;
+};
+struct KeySection
+{
+    const char * title;
+    vector< KeyRow > rows;
+};
+
+// The 3D view's keys, Blender's, as the popup lists them.
+const vector< KeySection > & KeySections()
+{
+    static const vector< KeySection > sections = {
+        { "Select and show", {
+            { "Click", "Select a component" },
+            { "Shift / Ctrl + click", "Add to or take from the selection" },
+            { "A", "Select all" },
+            { "Alt + A", "Deselect all" },
+            { "H", "Hide the selection" },
+            { "Shift + H", "Hide everything else" },
+            { "Alt + H", "Show everything" },
+            { "Z", "Selection: wireframe / shaded" },
+            { "Shift + Z", "Every component: wireframe / shaded" },
+        } },
+        { "Move and rotate", {
+            { "G", "Move the selection with the mouse" },
+            { "R", "Rotate it with the mouse" },
+            { "Shift + D", "Duplicate, then move the copies" },
+            { "X / Delete", "Delete the selection (asks first)" },
+            { "X / Y / Z", "Hold to that axis (again to let go)" },
+            { "G  X  10", "Move 10 along X (type the value)" },
+            { "R  Z  90", "Rotate 90 degrees about Z" },
+            { "Ctrl", "Snap: whole units, 5 degrees" },
+            { "Enter / click", "Apply" },
+            { "Esc / right-click", "Cancel" },
+        } },
+        { "View", {
+            { "1 / 3 / 7", "Front / left / top (Ctrl: the other side)" },
+            { "5", "Perspective / orthographic" },
+            { "2 4 6 8", "Orbit in steps" },
+            { "9", "Look from the other side" },
+            { "F / Home / numpad .", "Fit the model" },
+            { "C", "Center the model (zoom kept)" },
+            { "F5 - F12", "The View menu's views" },
+            { "Left drag", "Orbit" },
+            { "Right drag", "Pan" },
+            { "Wheel", "Zoom" },
+        } },
+    };
+    return sections;
+}
+
+void FillRect( float x, float y, float w, float h )
+{
+    glBegin( GL_QUADS );
+    glVertex2f( x, y );
+    glVertex2f( x + w, y );
+    glVertex2f( x + w, y + h );
+    glVertex2f( x, y + h );
+    glEnd();
+}
+
+void FrameRect( float x, float y, float w, float h )
+{
+    glBegin( GL_LINE_LOOP );
+    glVertex2f( x + 0.5f, y + 0.5f );
+    glVertex2f( x + w - 0.5f, y + 0.5f );
+    glVertex2f( x + w - 0.5f, y + h - 0.5f );
+    glVertex2f( x + 0.5f, y + h - 0.5f );
+    glEnd();
+}
+}
+
+bool VspGlWindow::KeysIconHit( int x, int y )
+{
+    return m_LinkedScreen == DrawObj::VSP_MAIN_SCREEN && m_KeysIcon[2] > 0 &&
+           x >= m_KeysIcon[0] && x <= m_KeysIcon[0] + m_KeysIcon[2] &&
+           y >= m_KeysIcon[1] && y <= m_KeysIcon[1] + m_KeysIcon[3];
+}
+
+bool VspGlWindow::KeysPanelHit( int x, int y )
+{
+    return m_KeysPanel[2] > 0 &&
+           x >= m_KeysPanel[0] && x <= m_KeysPanel[0] + m_KeysPanel[2] &&
+           y >= m_KeysPanel[1] && y <= m_KeysPanel[1] + m_KeysPanel[3];
+}
+
+// The keyboard button in the bottom left corner, and its list when open.  Main window only.
+void VspGlWindow::KeysDraw()
+{
+    if ( m_LinkedScreen != DrawObj::VSP_MAIN_SCREEN )
+    {
+        return;
+    }
+
+    float ppu = pixels_per_unit();
+
+    GLint program = 0;
+    glGetIntegerv( GL_CURRENT_PROGRAM, &program );
+    glUseProgram( 0 );
+
+    glPushAttrib( GL_ALL_ATTRIB_BITS );
+    glDisable( GL_SCISSOR_TEST );
+    glDisable( GL_DEPTH_TEST );
+    glDisable( GL_LIGHTING );
+    glDisable( GL_TEXTURE_2D );
+    glEnable( GL_BLEND );
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+
+    glViewport( 0, 0, pixel_w(), pixel_h() );
+    glMatrixMode( GL_PROJECTION );
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho( 0, pixel_w(), 0, pixel_h(), -1, 1 );
+    glMatrixMode( GL_MODELVIEW );
+    glPushMatrix();
+    glLoadIdentity();
+
+    //==== The button: a keyboard ====//
+    float bx = 14.0f * ppu, by = 12.0f * ppu, bw = 30.0f * ppu, bh = 22.0f * ppu;
+    m_KeysIcon[0] = ( int )bx;
+    m_KeysIcon[1] = ( int )by;
+    m_KeysIcon[2] = ( int )bw;
+    m_KeysIcon[3] = ( int )bh;
+    bool lit = m_KeysOpen || m_KeysHover;
+    if ( lit )
+    {
+        glColor4f( 1.0f, 1.0f, 1.0f, m_KeysOpen ? 0.16f : 0.09f );
+        FillRect( bx, by, bw, bh );
+    }
+    float a = lit ? 0.95f : 0.6f;
+    glColor4f( 0.88f, 0.90f, 0.93f, a );
+    glLineWidth( 1.3f * ppu );
+    float kx = bx + 5.0f * ppu, ky = by + 4.5f * ppu, kw = bw - 10.0f * ppu, kh = bh - 9.0f * ppu;
+    FrameRect( kx, ky, kw, kh );
+    // Two rows of keys and a space bar.
+    float dot = 1.6f * ppu;
+    for ( int r = 0; r < 2; r++ )
+    {
+        float yy = ky + kh - ( 3.5f + 3.6f * r ) * ppu;
+        for ( int c = 0; c < 5; c++ )
+        {
+            if ( r == 1 && ( c == 0 || c == 4 ) )
+            {
+                continue;
+            }
+            float xx = kx + ( 2.6f + c * ( kw / ppu - 5.2f ) / 4.0f ) * ppu;
+            FillRect( xx - dot * 0.5f, yy - dot * 0.5f, dot, dot );
+        }
+    }
+    FillRect( kx + kw * 0.3f, ky + 2.0f * ppu, kw * 0.4f, 1.3f * ppu );
+
+    m_KeysPanel[0] = m_KeysPanel[1] = m_KeysPanel[2] = m_KeysPanel[3] = 0;
+    if ( m_KeysOpen )
+    {
+        //==== The list ====//
+        const vector< KeySection > & sections = KeySections();
+        const float pad = 14.0f * ppu;
+        const float row = 19.0f * ppu;
+        const float gap = 10.0f * ppu;      // Between a key and its description.
+        const float colgap = 26.0f * ppu;   // Between sections laid side by side.
+
+        // Each section's key and description widths.  gl_width measures in screen units; the text
+        // is drawn ppu times that in pixels.
+        vector< float > keyw( sections.size(), 0.0f ), descw( sections.size(), 0.0f );
+        for ( size_t i = 0; i < sections.size(); i++ )
+        {
+            gl_font( FL_HELVETICA_BOLD, 13 );
+            keyw[i] = std::max( keyw[i], ( float )gl_width( sections[i].title ) * ppu );
+            for ( const KeyRow & k : sections[i].rows )
+            {
+                keyw[i] = std::max( keyw[i], ( float )gl_width( k.keys ) * ppu );
+            }
+            gl_font( FL_HELVETICA, 13 );
+            for ( const KeyRow & k : sections[i].rows )
+            {
+                descw[i] = std::max( descw[i], ( float )gl_width( k.what ) * ppu );
+            }
+            keyw[i] = std::min( keyw[i], 170.0f * ppu );
+        }
+
+        // Side by side when they fit the window, else stacked.
+        float wide = 2.0f * pad;
+        size_t most = 0;
+        for ( size_t i = 0; i < sections.size(); i++ )
+        {
+            wide += keyw[i] + gap + descw[i] + ( i ? colgap : 0.0f );
+            most = std::max( most, sections[i].rows.size() );
+        }
+        bool side = wide <= pixel_w() - 2.0f * bx;
+
+        float pw, ph;
+        if ( side )
+        {
+            pw = wide;
+            ph = 2.0f * pad + row * ( 1.5f + most );
+        }
+        else
+        {
+            float kmax = 0.0f, dmax = 0.0f;
+            size_t rows = 0;
+            for ( size_t i = 0; i < sections.size(); i++ )
+            {
+                kmax = std::max( kmax, keyw[i] );
+                dmax = std::max( dmax, descw[i] );
+                rows += sections[i].rows.size();
+            }
+            pw = 2.0f * pad + kmax + gap + dmax;
+            ph = 2.0f * pad + row * ( rows + 1.5f * sections.size() ) - 0.5f * row;
+            for ( size_t i = 0; i < sections.size(); i++ )
+            {
+                keyw[i] = kmax;
+            }
+        }
+
+        float px = bx;
+        float py = by + bh + 8.0f * ppu;
+        m_KeysPanel[0] = ( int )px;
+        m_KeysPanel[1] = ( int )py;
+        m_KeysPanel[2] = ( int )pw;
+        m_KeysPanel[3] = ( int )ph;
+
+        glColor4f( 0.115f, 0.13f, 0.15f, 0.95f );
+        FillRect( px, py, pw, ph );
+        glColor4f( 0.40f, 0.43f, 0.48f, 0.9f );
+        glLineWidth( 1.0f );
+        FrameRect( px, py, pw, ph );
+
+        float cx = px + pad;
+        float top = py + ph - pad;
+        float cy = top;
+        for ( size_t i = 0; i < sections.size(); i++ )
+        {
+            if ( side && i )
+            {
+                cx += keyw[i - 1] + gap + descw[i - 1] + colgap;
+                cy = top;
+            }
+            cy -= row;
+            gl_font( FL_HELVETICA_BOLD, 13 );
+            glColor4f( 0.50f, 0.72f, 1.0f, 1.0f );
+            gl_draw( sections[i].title, cx, cy + 4.0f * ppu );
+            cy -= 0.5f * row;
+            for ( const KeyRow & k : sections[i].rows )
+            {
+                cy -= row;
+                gl_font( FL_HELVETICA_BOLD, 13 );
+                glColor4f( 0.96f, 0.97f, 0.98f, 1.0f );
+                gl_draw( k.keys, cx, cy + 5.0f * ppu );
+                gl_font( FL_HELVETICA, 13 );
+                glColor4f( 0.74f, 0.77f, 0.81f, 1.0f );
+                gl_draw( k.what, cx + keyw[i] + gap, cy + 5.0f * ppu );
+            }
+            if ( !side )
+            {
+                cy -= 0.5f * row;
+            }
+        }
+    }
+
+    glMatrixMode( GL_PROJECTION );
+    glPopMatrix();
+    glMatrixMode( GL_MODELVIEW );
+    glPopMatrix();
+    glPopAttrib();
+
+    glUseProgram( program );
 }
 
 //==== TitanVSP: Blender's view keys and auto perspective ====//
@@ -3465,6 +4054,31 @@ bool VspGlWindow::ViewKey()
             return true;
         }
         return false;
+    case '2':
+    case '4':
+    case '6':
+    case '8':
+    case '9':
+        if ( ctrl )
+        {
+            return false;
+        }
+        OrbitStep( key );
+        return true;
+    case '.':
+        if ( !keypad || ctrl )
+        {
+            return false;
+        }
+        main->FitViewAnimated( true );
+        return true;
+    case FL_Home:
+        if ( ctrl )
+        {
+            return false;
+        }
+        main->FitViewAnimated( true );
+        return true;
     default:
         return false;
     }
@@ -3543,13 +4157,23 @@ bool VspGlWindow::XfKey()
         }
         return true;
     }
-    if ( key == 'x' || key == 'y' || key == 'z' )
+    if ( key == FL_Control_L || key == FL_Control_R )
     {
-        if ( m_XfAxis >= 0 )
+        m_XfSnap = true;
+        XfApply( false );
+        redraw();
+        return true;
+    }
+    if ( ( key == 'x' || key == 'y' || key == 'z' ) && !mods )
+    {
+        // The same axis again lets go of it.
+        int axis = key - 'x';
+        XfRestore();
+        m_XfAxis = axis == m_XfAxis ? -1 : axis;
+        if ( m_XfAxis < 0 )
         {
-            XfRestore();
+            m_XfText.clear();
         }
-        m_XfAxis = key - 'x';
         XfApply( false );
         redraw();
         return true;
@@ -3564,7 +4188,12 @@ bool VspGlWindow::XfKey()
         }
         return true;
     }
-    // The number, once there's an axis to apply it along.
+    // A number: along the held axis, or X for a move and the line of sight's axis for a rotation.
+    if ( ch && m_XfAxis < 0 && ( ( ch >= '0' && ch <= '9' ) || ch == '.' || ch == '-' ) )
+    {
+        XfRestore();
+        m_XfAxis = m_XfMode == XF_MOVE ? 0 : m_XfRotAxis;
+    }
     if ( m_XfAxis >= 0 && ch )
     {
         if ( ch >= '0' && ch <= '9' )
@@ -3605,6 +4234,34 @@ void VspGlWindow::XfBegin( int mode )
     m_XfStartRot.clear();
     m_XfAttachInv.clear();
 
+    // The mouse drives it from here.
+    m_XfMouse0 = m_XfMouseNow = m_XfMousePrev = m_HoverPos;
+    m_XfAngle = 0.0;
+    m_XfMoved = false;
+    m_XfSnap = Fl::event_state( FL_CTRL ) != 0;
+    m_XfFrameOK = GizmoGetFrame( m_XfFrame );
+
+    // A rotation with no axis held turns about the axis nearest the line of sight, the way that
+    // matches the mouse going round: anticlockwise on screen is positive about an axis pointing at
+    // the viewer.
+    m_XfRotAxis = 2;
+    VSPGraphic::Camera * cam = m_GEngine->getDisplay() ? m_GEngine->getDisplay()->getCamera() : nullptr;
+    if ( cam )
+    {
+        glm::mat4 mv = cam->getModelViewMatrix();
+        float best = -1.0f;
+        for ( int k = 0; k < 3; k++ )
+        {
+            float toward = mv[k][2];    // World axis k's component along the camera's z, toward the viewer.
+            m_XfRotSign[k] = toward >= 0.0f ? 1.0 : -1.0;
+            if ( std::fabs( toward ) > best )
+            {
+                best = std::fabs( toward );
+                m_XfRotAxis = k;
+            }
+        }
+    }
+
     for ( Geom * g : GizmoGeoms() )
     {
         bool rel = g->m_AbsRelFlag() == vsp::REL;
@@ -3630,23 +4287,126 @@ void VspGlWindow::XfBegin( int mode )
     redraw();
 }
 
-// Sets the components to their start plus the typed amount along the axis.  A move is along the
-// model's axis: a component placed relative to its parent takes it through the parent's
-// attachment rotation, as the move arrows do.  A rotation adds to that axis's rotation.  When
-// record is set the change goes on the undo stack; previews don't.
+// Follows the mouse while moving or rotating.
+void VspGlWindow::XfMouse( int x, int y )
+{
+    glm::vec2 m( x, y );
+    m_XfSnap = Fl::event_state( FL_CTRL ) != 0;
+    if ( m_XfFrameOK )
+    {
+        // The turn round the selection, added up so it can go past half a turn.
+        glm::vec2 a = m_XfMousePrev - m_XfFrame.m_Origin, b = m - m_XfFrame.m_Origin;
+        float minr = 4.0f * pixels_per_unit();
+        if ( glm::length( a ) > minr && glm::length( b ) > minr )
+        {
+            m_XfAngle += glm::degrees( atan2( a.x * b.y - a.y * b.x, glm::dot( a, b ) ) );
+            m_XfMousePrev = m;
+        }
+        else if ( glm::length( a ) <= minr )
+        {
+            m_XfMousePrev = m;
+        }
+    }
+    m_XfMouseNow = m;
+    m_XfMoved = m_XfMoved || glm::length( m - m_XfMouse0 ) > 2.0f;
+    if ( m_XfText.empty() )
+    {
+        XfApply( false );
+        redraw();
+    }
+}
+
+// What G or R comes to now: a typed amount, or else the mouse's travel.  A move with no axis held
+// is in the view's plane: the smallest model move whose image on screen is the mouse's travel.
+void VspGlWindow::XfCompute( vec3d & move, int & raxis, double & angle )
+{
+    move = vec3d();
+    raxis = m_XfAxis >= 0 ? m_XfAxis : m_XfRotAxis;
+    angle = 0.0;
+
+    bool typed = m_XfAxis >= 0 && !m_XfText.empty();
+    double val = 0.0;
+    if ( typed && m_XfText != "-" && m_XfText != "." && m_XfText != "-." )
+    {
+        val = atof( m_XfText.c_str() );
+    }
+
+    if ( m_XfMode == XF_MOVE )
+    {
+        if ( typed )
+        {
+            move[ m_XfAxis ] = val;
+            return;
+        }
+        if ( !m_XfFrameOK )
+        {
+            return;
+        }
+        glm::vec2 d = m_XfMouseNow - m_XfMouse0;
+        if ( m_XfAxis >= 0 )
+        {
+            float px = m_XfFrame.m_PxPerUnit[ m_XfAxis ];
+            double v = px > 1e-6f ? glm::dot( d, m_XfFrame.m_Dir[ m_XfAxis ] ) / px : 0.0;
+            move[ m_XfAxis ] = m_XfSnap ? std::round( v ) : v;
+            return;
+        }
+        // Screen travel per unit along each axis: J = [ c0 c1 c2 ].  The least-norm w with J w = d
+        // is J^T ( J J^T )^-1 d.
+        glm::vec2 c[3];
+        for ( int k = 0; k < 3; k++ )
+        {
+            c[k] = m_XfFrame.m_Dir[k] * m_XfFrame.m_PxPerUnit[k];
+        }
+        double m00 = 0.0, m01 = 0.0, m11 = 0.0;
+        for ( int k = 0; k < 3; k++ )
+        {
+            m00 += c[k].x * c[k].x;
+            m01 += c[k].x * c[k].y;
+            m11 += c[k].y * c[k].y;
+        }
+        double det = m00 * m11 - m01 * m01;
+        if ( std::fabs( det ) < 1e-12 )
+        {
+            return;
+        }
+        double y0 = ( m11 * d.x - m01 * d.y ) / det;
+        double y1 = ( m00 * d.y - m01 * d.x ) / det;
+        for ( int k = 0; k < 3; k++ )
+        {
+            double v = c[k].x * y0 + c[k].y * y1;
+            move[k] = m_XfSnap ? std::round( v ) : v;
+        }
+        return;
+    }
+
+    if ( typed )
+    {
+        angle = val;
+        return;
+    }
+    angle = m_XfAngle * m_XfRotSign[ raxis ];
+    if ( m_XfSnap )
+    {
+        angle = 5.0 * std::round( angle / 5.0 );
+    }
+}
+
+// Sets the components to their start plus the move or rotation.  A move is along the model's
+// axes: a component placed relative to its parent takes it through the parent's attachment
+// rotation, as the move arrows do.  A rotation adds to that axis's rotation.  When record is set
+// the change goes on the undo stack; previews don't.
 void VspGlWindow::XfApply( bool record )
 {
     Vehicle * veh = VehicleMgr.GetVehicle();
-    if ( !veh || m_XfAxis < 0 )
+    if ( !veh || m_XfMode == XF_NONE )
     {
         return;
     }
 
-    double val = 0.0;
-    if ( !m_XfText.empty() && m_XfText != "-" && m_XfText != "." && m_XfText != "-." )
-    {
-        val = atof( m_XfText.c_str() );
-    }
+    vec3d mv;
+    int raxis = 2;
+    double angle = 0.0;
+    XfCompute( mv, raxis, angle );
 
     bool drag = !record;
     for ( int i = 0; i < ( int )m_XfGeoms.size(); i++ )
@@ -3659,8 +4419,7 @@ void VspGlWindow::XfApply( bool record )
         bool rel = m_XfRel[i];
         if ( m_XfMode == XF_MOVE )
         {
-            vec3d move;
-            move[ m_XfAxis ] = val;
+            vec3d move = mv;
             vec3d loc = m_XfStartLoc[i] + ( rel ? m_XfAttachInv[i].xformnorm( move ) : move );
             Parm * p[3] = { &g->m_XLoc, &g->m_YLoc, &g->m_ZLoc };
             if ( rel )
@@ -3683,7 +4442,7 @@ void VspGlWindow::XfApply( bool record )
                 p[1] = &g->m_YRelRot;
                 p[2] = &g->m_ZRelRot;
             }
-            p[ m_XfAxis ]->SetFromDevice( m_XfStartRot[i][ m_XfAxis ] + val, drag );
+            p[ raxis ]->SetFromDevice( m_XfStartRot[i][ raxis ] + angle, drag );
         }
     }
     m_ScreenMgr->SetUpdateFlag( true );
@@ -3725,7 +4484,7 @@ void VspGlWindow::XfRestore()
 void VspGlWindow::XfEnd( bool confirm )
 {
     XfRestore();
-    if ( confirm && m_XfAxis >= 0 && !m_XfText.empty() )
+    if ( confirm && ( ( m_XfAxis >= 0 && !m_XfText.empty() ) || ( m_XfText.empty() && m_XfMoved ) ) )
     {
         XfApply( true );
     }
@@ -3774,8 +4533,8 @@ void VspGlWindow::XfDraw()
     glPushMatrix();
     glLoadIdentity();
 
-    GizmoFrame f;
-    if ( m_XfAxis >= 0 && GizmoGetFrame( f ) && glm::length( f.m_Dir[ m_XfAxis ] ) > 0.0f )
+    GizmoFrame f = m_XfFrame;
+    if ( m_XfAxis >= 0 && m_XfFrameOK && glm::length( f.m_Dir[ m_XfAxis ] ) > 0.0f )
     {
         const float * c = GIZMO_COLOR[ m_XfAxis ];
         glColor4f( c[0], c[1], c[2], 0.85f );
@@ -3789,69 +4548,34 @@ void VspGlWindow::XfDraw()
         glEnd();
     }
 
-    string label = m_XfMode == XF_MOVE ? "Move" : "Rotate";
-    if ( m_XfAxis < 0 )
+    vec3d mv;
+    int raxis = 2;
+    double angle = 0.0;
+    XfCompute( mv, raxis, angle );
+    char buf[160];
+    string label;
+    if ( m_XfMode == XF_MOVE )
     {
-        label += ": press X, Y or Z";
+        if ( m_XfAxis >= 0 )
+        {
+            snprintf( buf, sizeof( buf ), "Move %c: %s", 'X' + m_XfAxis,
+                      m_XfText.empty() ? std::to_string( mv[ m_XfAxis ] ).substr( 0, 8 ).c_str() : m_XfText.c_str() );
+        }
+        else
+        {
+            snprintf( buf, sizeof( buf ), "Move: %.3f, %.3f, %.3f", mv.x(), mv.y(), mv.z() );
+        }
     }
     else
     {
-        label += string( " " ) + char( 'X' + m_XfAxis ) + ": " + ( m_XfText.empty() ? string( "0" ) : m_XfText );
-        if ( m_XfMode == XF_ROTATE )
-        {
-            label += " deg";
-        }
-        label += "    (Enter to apply, Esc to cancel)";
+        snprintf( buf, sizeof( buf ), "Rotate %c: %s deg", 'X' + raxis,
+                  m_XfText.empty() ? std::to_string( angle ).substr( 0, 7 ).c_str() : m_XfText.c_str() );
     }
+    label = buf;
+    label += "     X/Y/Z axis, type a value, Ctrl snaps, Enter or click applies, Esc cancels";
     gl_font( FL_HELVETICA_BOLD, 16 );
     glColor4f( 1.0f, 1.0f, 1.0f, 0.95f );
     gl_draw( label.c_str(), 16.0f * ppu, pixel_h() - 28.0f * ppu );
-
-    glMatrixMode( GL_PROJECTION );
-    glPopMatrix();
-    glMatrixMode( GL_MODELVIEW );
-    glPopMatrix();
-    glPopAttrib();
-
-    glUseProgram( program );
-}
-
-// Two dim lines in the bottom left corner, under the XYZ triad, so the keyboard move and rotate
-// can be found without reading the docs.  Main window only.
-void VspGlWindow::XfHintDraw()
-{
-    if ( m_LinkedScreen != DrawObj::VSP_MAIN_SCREEN )
-    {
-        return;
-    }
-
-    float ppu = pixels_per_unit();
-
-    GLint program = 0;
-    glGetIntegerv( GL_CURRENT_PROGRAM, &program );
-    glUseProgram( 0 );
-
-    glPushAttrib( GL_ALL_ATTRIB_BITS );
-    glDisable( GL_SCISSOR_TEST );
-    glDisable( GL_DEPTH_TEST );
-    glDisable( GL_LIGHTING );
-    glDisable( GL_TEXTURE_2D );
-    glEnable( GL_BLEND );
-    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-
-    glViewport( 0, 0, pixel_w(), pixel_h() );
-    glMatrixMode( GL_PROJECTION );
-    glPushMatrix();
-    glLoadIdentity();
-    glOrtho( 0, pixel_w(), 0, pixel_h(), -1, 1 );
-    glMatrixMode( GL_MODELVIEW );
-    glPushMatrix();
-    glLoadIdentity();
-
-    gl_font( FL_HELVETICA, 13 );
-    glColor4f( 0.85f, 0.87f, 0.90f, 0.55f );
-    gl_draw( "G, X/Y/Z, number, Enter:  move  (e.g. G X 12)", 14.0f * ppu, 30.0f * ppu );
-    gl_draw( "R, X/Y/Z, degrees, Enter:  rotate  (e.g. R Z 90)    Esc cancels", 14.0f * ppu, 12.0f * ppu );
 
     glMatrixMode( GL_PROJECTION );
     glPopMatrix();
