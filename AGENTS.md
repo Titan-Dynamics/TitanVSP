@@ -92,7 +92,10 @@ them:
 - **Commits:** a short summary line, then a body explaining what changed and why, wrapped at
   about 78 columns. No AI co-author or "generated with" trailers.
 - **Docs:** when a user-visible feature changes, update [CHANGES.md](CHANGES.md), and
-  [README.md](README.md) if it covers that feature.
+  [README.md](README.md) if it covers that feature. CHANGES.md lists how TitanVSP differs from
+  upstream OpenVSP, not a history: describe what TitanVSP does now, compared with upstream, never
+  what an earlier TitanVSP did ("now", "used to", "was", release numbers). Release history belongs
+  in the GitHub releases, not there.
 
 ## Fillet component
 

@@ -333,7 +333,7 @@ window. **View → Use White Background** switches to a white background for pri
 
 `dev\build.ps1`, `dev\run.ps1` and `dev\install-shortcut.ps1`, described
 [above](#build-and-run). Releases are built by a GitHub Actions workflow you run by hand
-(`.github/workflows/release.yml`; see [CHANGES.md](CHANGES.md#releases)).
+(`.github/workflows/release.yml`; see [AGENTS.md](AGENTS.md#releases)).
 
 ### Python API in the dev build
 
