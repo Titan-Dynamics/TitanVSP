@@ -20,6 +20,7 @@
 #include "BORScreen.h"
 #include "CloneScreen.h"
 #include "FilletScreen.h"
+#include "CylinderScreen.h"
 #include "ConformalScreen.h"
 #include "CustomScreen.h"
 #include "DrawObj.h"

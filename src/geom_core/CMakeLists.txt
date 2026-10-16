@@ -53,6 +53,7 @@ DesignVarMgr.cpp
 EllipsoidGeom.cpp
 FeaStructure.cpp
 FilletGeom.cpp
+CylinderGeom.cpp
 FitModelMgr.cpp
 FuselageGeom.cpp
 GearGeom.cpp
@@ -141,6 +142,7 @@ DesignVarMgr.h
 EllipsoidGeom.h
 FeaStructure.h
 FilletGeom.h
+CylinderGeom.h
 FemaleGeomDataReduced.h
 FitModelMgr.h
 FuselageGeom.h

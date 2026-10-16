@@ -52,6 +52,7 @@ DesignVarScreen.cpp
 DXFOptionsScreen.cpp
 EllipsoidScreen.cpp
 FilletScreen.cpp
+CylinderScreen.cpp
 ExportScreen.cpp
 FeaPartEditScreen.cpp
 FitModelScreen.cpp
@@ -152,6 +153,7 @@ DXFOptionsScreen.h
 ExportScreen.h
 EllipsoidScreen.h
 FilletScreen.h
+CylinderScreen.h
 FeaPartEditScreen.h
 FitModelScreen.h
 FuselageScreen.h

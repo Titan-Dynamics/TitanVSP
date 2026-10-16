@@ -1092,6 +1092,7 @@ void ManageGeomScreen::CreateScreens()
     m_GeomScreenVec[vsp::COBRA_GEOM_SCREEN] = new CobraScreen( m_ScreenMgr );
     m_GeomScreenVec[vsp::CLONE_GEOM_SCREEN] = new CloneScreen( m_ScreenMgr );
     m_GeomScreenVec[vsp::FILLET_GEOM_SCREEN] = new FilletScreen( m_ScreenMgr );
+    m_GeomScreenVec[vsp::CYLINDER_GEOM_SCREEN] = new CylinderScreen( m_ScreenMgr );
 
     for ( int i = 0 ; i < ( int )m_GeomScreenVec.size() ; i++ )
     {

@@ -2084,7 +2084,7 @@ void FilletGeom::ApplyScale( double currentScale )
 // The bodies a fillet blends into, and that one can hang off besides a wing.
 bool FilletGeom::IsBodyType( int type )
 {
-    return type == FUSELAGE_GEOM_TYPE || type == POD_GEOM_TYPE || type == STACK_GEOM_TYPE;
+    return type == FUSELAGE_GEOM_TYPE || type == POD_GEOM_TYPE || type == STACK_GEOM_TYPE || type == CYLINDER_GEOM_TYPE;
 }
 
 // The fillet is built in world coordinates, so its own placement is held at the identity.

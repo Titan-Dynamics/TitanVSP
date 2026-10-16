@@ -993,6 +993,7 @@ enum GUI_GEOM_SCREEN { POD_GEOM_SCREEN,	/*!< Pod geom screen */
                        COBRA_GEOM_SCREEN,	/*!< Cobra body geom screen */
                        CLONE_GEOM_SCREEN,	/*!< Clone geom screen */
                        FILLET_GEOM_SCREEN,	/*!< Fillet geom screen */
+                       CYLINDER_GEOM_SCREEN,	/*!< Cylinder geom screen */
                        NUM_GEOM_SCREENS,	/*!< Number of geom screens */
                        ALL_GEOM_SCREENS	/*!< All geom screens */
 };

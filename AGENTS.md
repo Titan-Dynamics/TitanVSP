@@ -22,8 +22,8 @@ there: smaller diffs keep upstream updates easy (see [Upstream updates](#upstrea
 
 | Path | What's there |
 | --- | --- |
-| `src/geom_core/` | The model: `Vehicle`, `Geom` and every component type, Parms, XML I/O. **`FilletGeom.cpp/.h` is TitanVSP's.** |
-| `src/gui_and_draw/` | FLTK screens. `ScreenMgr.cpp` holds the dark theme and the file chooser; `ManageGeomScreen.cpp` registers each component's screen. **`FilletScreen.cpp/.h` is TitanVSP's.** |
+| `src/geom_core/` | The model: `Vehicle`, `Geom` and every component type, Parms, XML I/O. **`FilletGeom.cpp/.h` and `CylinderGeom.cpp/.h` are TitanVSP's.** |
+| `src/gui_and_draw/` | FLTK screens. `ScreenMgr.cpp` holds the dark theme and the file chooser; `ManageGeomScreen.cpp` registers each component's screen. **`FilletScreen.cpp/.h` and `CylinderScreen.cpp/.h` are TitanVSP's.** |
 | `src/vsp_graphic/` | OpenGL rendering: `Camera`, `Viewport`, `Background`, `Display`/`LayoutMgr`, picking. **`include/TitanLogo.h` (the embedded logo) is TitanVSP's.** |
 | `src/vsp_aero/Viewer/` | The VSPAERO Viewer, `vspviewer.exe`: a separate FLTK/OpenGL program (`glviewer.C`, `vspaero_viewer.C`, UI in `viewerUI.fl`). |
 | `src/external/cartesian/` | The graph library behind OpenVSP's plots (upstream, with one TitanVSP hook; see [Plots](#plots-results-manager)). |
@@ -204,6 +204,17 @@ header comment gives the outline; this section covers what you need to change it
   before and after.
 - **Fails cleanly:** failure means an empty surface plus a helpful `m_Status`, never a crash or a
   hang.
+
+## Cylinder component
+
+`CylinderGeom` (`geom_core`) and `CylinderScreen` (`gui_and_draw`), registered like the Fillet:
+`CYLINDER_GEOM_TYPE` at the end of the type enum in `Geom.h`, `CYLINDER_GEOM_SCREEN` at the end of
+`GUI_GEOM_SCREEN` in `APIDefines.h` (and in `ScriptMgr`), `GeomType( ..., "CYLINDER", true )` and a
+`CreateGeom` branch in `Vehicle.cpp`, the screen in `ManageGeomScreen.cpp` (its header included from
+`ManageGeomScreen.h`), and both CMake lists. `UpdateSurf` revolves a three-piece straight profile
+(axis → radius, along the length, radius → axis) with `CreateBodyRevolution`, as `PodGeom` does
+with its curve, giving one closed surface with flat ends; the two end circles are feature lines.
+The only Parms are `Length` and `Diameter`. `FilletGeom::IsBodyType` includes it.
 
 ## Dark theme
 

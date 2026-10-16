@@ -33,6 +33,7 @@
 #include "EllipsoidGeom.h"
 #include "FileUtil.h"
 #include "FilletGeom.h"
+#include "CylinderGeom.h"
 #include "FitModelMgr.h"
 #include "FuselageGeom.h"
 #include "HingeGeom.h"
@@ -475,6 +476,7 @@ void Vehicle::Init()
     m_GeomTypeVec.push_back( GeomType( COBRA_GEOM_TYPE, "COBRA", true ) );
     m_GeomTypeVec.push_back( GeomType( CLONE_GEOM_TYPE, "CLONE", true ) );
     m_GeomTypeVec.push_back( GeomType( FILLET_GEOM_TYPE, "FILLET", true ) );
+    m_GeomTypeVec.push_back( GeomType( CYLINDER_GEOM_TYPE, "CYLINDER", true ) );
 
     //==== Get Custom Geom Types =====//
     vector< GeomType > custom_types = CustomGeomMgr.GetCustomTypes();
@@ -1185,6 +1187,10 @@ string Vehicle::CreateGeom( const GeomType & type )
     else if ( type.m_Name == "Fillet" || type.m_Name == "FILLET" )
     {
         new_geom = new FilletGeom( this );
+    }
+    else if ( type.m_Name == "Cylinder" || type.m_Name == "CYLINDER" )
+    {
+        new_geom = new CylinderGeom( this );
     }
 
     if ( !new_geom )

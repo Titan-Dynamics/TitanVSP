@@ -28,7 +28,7 @@ Models, scripts and the `openvsp` Python API work as they do in OpenVSP 3.55.0.
 
 | Area | What TitanVSP adds |
 | --- | --- |
-| **Geometry** | A **Fillet** component: smooth, watertight rolling-ball fillets at wing roots and wherever two bodies meet. |
+| **Geometry** | A **Fillet** component: smooth, watertight rolling-ball fillets at wing roots and wherever two bodies meet. A plain **Cylinder** component set by just its length and diameter. |
 | **Interface** | A dark theme throughout, including title bars and the 3D view; light component lines, with the selected component drawn brighter inside a thin white box; the Titan Dynamics logo in the 3D view. |
 | **3D view** | Click a component to select it, and Blender-style move arrows to drag it along X, Y or Z in whole units. Blanks shown as balls. An orthographic/perspective switch (**View → Perspective**, key **5**) that keeps the framing. |
 | **Files** | The Windows Open and Save dialogs for every open, save, import and export. |
@@ -208,6 +208,12 @@ The parameters are `Radius`, `NumStations`, `TETaper` and `Sink`, all in the `De
   **Radius**.
 - A rebuild takes about 0.1–1.5 s, depending on the junction.
 - Fillets are a TitanVSP component; upstream OpenVSP doesn't know them.
+
+### Cylinder component
+
+Pick **CYLINDER** in the Geom Browser's type list and click **Add**. It's a closed, flat-ended
+cylinder along X, set only by **Length** and **Diameter** on its **Design** tab; no sections, no
+blending. Fillets treat it as a body. From Python: `vsp.AddGeom('CYLINDER')`.
 
 ### Dark theme
 
