@@ -446,7 +446,7 @@ the zip name.
 
 Releases are automatic: every push to `main` runs
 [`.github/workflows/release.yml`](.github/workflows/release.yml) on a Windows runner. It builds the
-libraries and the `PACKAGE` zip with the same options as `devuild.ps1`, publishes it as the next
+libraries and the `PACKAGE` zip with the same options as `dev\build.ps1`, publishes it as the next
 tag, `v<openvsp version>-titan.<n+1>` (e.g. `v3.55.0-titan.9` after `titan.8`), then deletes every
 other `-titan.` release and its tag. A newer push cancels a build still running. Don't create or
 delete releases by hand, and don't move tags.
