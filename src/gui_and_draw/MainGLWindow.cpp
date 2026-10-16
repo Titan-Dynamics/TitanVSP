@@ -62,6 +62,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <FL/gl.h>      // gl_draw, for the move/rotate prompt.  After GLEW.
+#include <FL/platform.H>
 
 #pragma warning(disable:4244)
 
@@ -4141,6 +4142,31 @@ void VspGlWindow::ClickSelect( int x, int y, bool toggle )
 
     geomScreen->SetSelection( sel );
     redraw();
+
+    // Selecting opens the component's window on the next update, and Windows hands it the
+    // keyboard.  Take it back for the view, so G and R work straight away.  Geom windows are owned
+    // by the main window, so they stay in front of it.  Twice, in case the window is slow to
+    // appear the first time.
+    Fl::add_timeout( 0.15, RefocusCB, this );
+    Fl::add_timeout( 0.5, RefocusCB, this );
+}
+
+void VspGlWindow::RefocusCB( void * data )
+{
+    VspGlWindow * win = ( VspGlWindow * )data;
+    Fl_Window * top = win ? win->top_window() : nullptr;
+    if ( !top || !top->shown() )
+    {
+        return;
+    }
+#ifdef _WIN32
+    HWND hwnd = fl_win32_xid( top );
+    if ( hwnd && GetForegroundWindow() != hwnd )
+    {
+        SetForegroundWindow( hwnd );
+    }
+#endif
+    Fl::focus( win );
 }
 
 int VspGlWindow::OnWheelScroll( int dx, int dy, int x, int y )

@@ -249,7 +249,10 @@ rotates and nothing highlights on hover. `ManageGeomScreen::SetSelection` applie
 
 ## Keyboard move and rotate
 
-`VspGlWindow::Xf*` (`MainGLWindow.cpp`), main window only. `handle()` offers `FL_KEYDOWN`, and
+`VspGlWindow::Xf*` (`MainGLWindow.cpp`), main window only. After a click-select, `RefocusCB` (two
+timeouts) re-activates the main window (`SetForegroundWindow`) and gives the GL window FLTK focus,
+since showing the geom screen takes the keyboard; geom screens are `set_non_modal`, so they stay
+above the main window. `handle()` offers `FL_KEYDOWN`, and
 `FL_SHORTCUT` with the mouse inside the window, to `XfKey` first. G/R start `XfBegin` when
 `GizmoGeoms()` (selected, location settable) isn't empty, recording each component's start
 location and rotation (Rel or Abs, matching its mode) and taking keyboard focus. While active,

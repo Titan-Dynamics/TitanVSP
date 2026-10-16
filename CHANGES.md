@@ -135,7 +135,9 @@ view: **G** (move) or **R** (rotate), then **X**, **Y** or **Z**, then a number,
 draws it as a line through the selection in its colour, a prompt in the top-left corner shows
 what's being typed, and the change previews as you type (`-` flips the sign, Backspace deletes).
 **Enter** or a left click applies it; **Esc** or a right click cancels. Without an axis nothing
-changes. Pressing **G** or **R** again switches between move and rotate. A move is along the
+changes. Pressing **G** or **R** again switches between move and rotate. Selecting a component
+by clicking it keeps the keyboard on the 3D view, so G and R work straight away even though its
+window opens. A move is along the
 model's axis, as with the move arrows; a rotation adds to that axis's rotation (X/Y/Z Rotation,
 or Rel Rotation for a component placed relative to its parent). One undo puts it back. With nothing
 selected, **R** still sets the rotation center (View → Set Rotation Center). **View → View Front Of** no longer has

@@ -214,6 +214,7 @@ private:
     // A left click -- pressed and released without dragging -- on a component selects it; with
     // Shift it's added to or taken out of the selection; on empty space it clears the selection.
     void ClickSelect( int x, int y, bool toggle );
+    static void RefocusCB( void * data );   // Takes the keyboard back after a geom window opens.
 
     //==== TitanVSP: Blanks as balls ====//
     // A Blank has no surface, so it's drawn as a small shaded ball at its origin -- a fixed size on
