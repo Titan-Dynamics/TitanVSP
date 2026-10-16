@@ -232,6 +232,11 @@ private:
     // right click cancels; Enter or a left click applies.  No axis, no change.
     enum { XF_NONE, XF_MOVE, XF_ROTATE };
     bool XfKey();
+
+    // TitanVSP: Blender's view keys, on the number row or keypad.  1 Front, 3 Left (nose to the
+    // left), 7 Top, with Ctrl the opposite side (Rear, Right, Bottom); keypad 5 toggles perspective.
+    bool ViewKey();
+    void EndSnapOrtho();    // Orbiting leaves an axis view's orthographic (MainVSPScreen).
     void XfBegin( int mode );
     void XfApply( bool record );
     void XfRestore();

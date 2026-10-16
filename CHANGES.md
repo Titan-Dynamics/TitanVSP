@@ -37,7 +37,7 @@ Releases made by hand, before the workflow:
 
 | Release | What's in it |
 | --- | --- |
-| [v3.55.0-titan.8](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.8) | The current release: everything on this page. Republished under the same tag to add View → Outlines and turn the viewport border off by default. |
+| [v3.55.0-titan.8](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.8) | The current release: everything on this page. Republished under the same tag to add View → Outlines, the viewport border off by default, auto perspective and Blender's view keys. |
 | v3.55.0-titan.7 (withdrawn) | titan.8 without: the Cylinder component, Geom Browser search, keyboard move and rotate (G / R), the ground grid, the anti-aliasing switch, the thicker outline, and the 3D view settings (perspective, grid, anti-aliasing) on by default and saved with each model. Replaced by titan.8. |
 | v3.55.0-titan.6 (withdrawn) | titan.7 without `CHANGES.md` in the zip. Replaced by titan.7. |
 | v3.55.0-titan.5 (withdrawn) | titan.6 without perspective by default, saved with each model. Replaced by titan.6. |
@@ -184,6 +184,15 @@ grid, rulers, probes and picking work the same in both modes.
 
 The view starts in perspective; each model saves the mode it was left in (see *Saved per model*
 above).
+
+**Auto perspective, as in Blender.** Snapping to an axis view (View → Top, Front, Left, Bottom,
+Rear or Right; F5–F7 and F9–F11) shows it orthographic, even in perspective mode. Orbiting the
+view, picking an isometric view (F8, F12) or pressing 5 goes back to perspective. In orthographic
+mode nothing changes. The model's saved Perspective setting isn't touched by any of this.
+
+**Blender's view keys.** With the mouse over the 3D view, on the number row or the keypad: **1**
+Front, **3** Left (nose to the left), **7** Top, and with **Ctrl** Rear, Right and Bottom. Keypad **5** toggles
+perspective, like the number row's 5.
 
 ## Geom Browser search
 

@@ -7,6 +7,7 @@ Each new release replaces the previous one, so this is always the latest TitanVS
 ### Recently added
 
 - **Outlines switch:** **View → Outlines** shows or hides the black outlines of every component at once.
+- **Auto perspective, as in Blender:** Top, Front, Left, Bottom, Rear and Right (**F5**–**F7**, **F9**–**F11**) show orthographic; orbit the view and it goes back to perspective, if it was. Blender's view keys work too: **1** Front, **3** Left (nose to the left), **7** Top, **Ctrl** for the opposite side, keypad **5** for perspective.
 - **No viewport border by default:** the white border round the active viewport is off; **Window → Border Toggle** turns it on.
 - **Cylinder component:** pick **CYLINDER** in the Geom Browser. A closed, flat-ended cylinder set only by **Length** and **Diameter**: no sections, no blending. Fillets treat it as a body.
 - **Geom Browser search:** a *Search...* field over the tree narrows it to the components whose names contain what you type, keeping their parents for context. **Enter** selects the matches. Fast with thousands of components.

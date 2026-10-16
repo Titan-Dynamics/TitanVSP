@@ -66,6 +66,13 @@ public:
     void ScreenGrab( const string & fname, int w, int h, bool transparentBG, bool autocrop );
     void SetViewAxis( bool vaxis );
     void SetPerspective( bool persp );
+
+    // TitanVSP: Blender's auto perspective.  Snapping to Top, Front, Left, Bottom, Rear or Right
+    // shows the view orthographic; orbiting it afterwards, or picking an isometric view, goes back
+    // to perspective if that's what it was.  The model's own Perspective setting isn't touched.
+    void EndSnapOrtho();
+    void TogglePerspective();   // View -> Perspective (5): a snapped view goes back to perspective.
+    void ApplyPerspective();
     void SetShowBorders( bool brdr );
     void SetBackground( double r, double g, double b );
 
@@ -191,6 +198,7 @@ protected:
     bool m_ShowXYZArrow;
     bool m_ShowBorder;
     bool m_Perspective;
+    bool m_SnapOrtho = false;   // Showing an axis view orthographic, in place of perspective.
 };
 
 

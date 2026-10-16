@@ -353,6 +353,15 @@ for the main window only (`m_LinkedScreen == VSP_MAIN_SCREEN`; `EditXSecWindow` 
   model, `Vehicle::m_ViewPerspective` (default on, saved in the `.vsp3`); the menu toggles it, and
   `MainVSPScreen::Update()` applies it to every viewport with `SetPerspective()` each update, since
   a layout change makes new, orthographic viewports.
+- **Auto perspective:** `MainVSPScreen::SetView` sets `m_SnapOrtho` for the six axis views when
+  the model is in perspective; `ApplyPerspective` shows perspective only when
+  `m_ViewPerspective && !m_SnapOrtho`, and the menu check follows what's shown. `EndSnapOrtho`
+  clears it: from `VspGlWindow::OnDrag` on every orbit (`rotate`, `rotateZ`), for isometric views,
+  and from `TogglePerspective` (5 on a snapped view returns to perspective instead of switching the
+  model to ortho). `m_ViewPerspective` is never changed by snapping.
+- **View keys:** `VspGlWindow::ViewKey` (on `FL_KEYDOWN`, and `FL_SHORTCUT` with the mouse over the
+  window): 1/3/7 on the number row or keypad call `MainVSPScreen::SetView` with Front/Left/Top, or
+  with Ctrl Rear/Right/Bottom (3 shows the nose to the left); keypad 5 calls `TogglePerspective`. Main window only, not during G/R.
 
 ## Plots (Results Manager)
 

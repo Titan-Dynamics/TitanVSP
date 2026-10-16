@@ -314,13 +314,11 @@ bool MainVSPScreen::Update()
     // The model says whether the view is in perspective, so each file reopens as it was left.
     // Reapplied every update: changing the window layout makes new viewports, which start
     // orthographic.
-    bool persp = VehicleMgr.GetVehicle()->m_ViewPerspective();
-    m_PerspectiveMenuItem.Update( persp );
+    ApplyPerspective();
     m_GridMenuItem.Update( VehicleMgr.GetVehicle()->m_ViewGrid() );
     m_AntialiasMenuItem.Update( VehicleMgr.GetVehicle()->m_ViewAntialias() );
     m_OutlinesMenuItem.Update( VehicleMgr.GetVehicle()->m_ViewOutlines() );
     m_GlWin->getGraphicEngine()->getDisplay()->setLineSmooth( VehicleMgr.GetVehicle()->m_ViewAntialias() );
-    SetPerspective( persp );
 
     m_FLTK_Window->redraw();
     return true;
@@ -630,10 +628,7 @@ void MainVSPScreen::ActionCB( void * data )
     }
     else if ( data == &m_PerspectiveMenuItem )
     {
-        Vehicle* veh = VehicleMgr.GetVehicle();
-        veh->m_ViewPerspective.Set( !veh->m_ViewPerspective() );
-        SetPerspective( veh->m_ViewPerspective() );
-        m_ScreenMgr->SetUpdateFlag( true );
+        TogglePerspective();
     }
     else if ( data == &m_TopMenuItem )
     {
@@ -902,6 +897,62 @@ void MainVSPScreen::SetView( int view )
     m_GlWin->setView( static_cast < VSPGraphic::Common::VSPenum > ( view ) );
 
     m_GlWin->UpdateAllViewParms();
+
+    // TitanVSP: an axis view shows orthographic (see EndSnapOrtho); an isometric one goes back to
+    // perspective.  Centring keeps whichever it is.
+    switch ( view )
+    {
+    case VSPGraphic::Common::VSP_CAM_TOP:
+    case VSPGraphic::Common::VSP_CAM_FRONT:
+    case VSPGraphic::Common::VSP_CAM_LEFT:
+    case VSPGraphic::Common::VSP_CAM_BOTTOM:
+    case VSPGraphic::Common::VSP_CAM_REAR:
+    case VSPGraphic::Common::VSP_CAM_RIGHT:
+        if ( VehicleMgr.GetVehicle()->m_ViewPerspective() )
+        {
+            m_SnapOrtho = true;
+            ApplyPerspective();
+        }
+        break;
+    case VSPGraphic::Common::VSP_CAM_CENTER:
+        break;
+    default:
+        EndSnapOrtho();
+        break;
+    }
+}
+
+// Back to perspective after an axis view, if the model is in perspective.
+void MainVSPScreen::EndSnapOrtho()
+{
+    if ( m_SnapOrtho )
+    {
+        m_SnapOrtho = false;
+        ApplyPerspective();
+    }
+}
+
+// As in Blender, 5 on a snapped axis view goes back to perspective rather than switching the
+// model to orthographic.
+void MainVSPScreen::TogglePerspective()
+{
+    if ( m_SnapOrtho )
+    {
+        EndSnapOrtho();
+        return;
+    }
+    Vehicle* veh = VehicleMgr.GetVehicle();
+    veh->m_ViewPerspective.Set( !veh->m_ViewPerspective() );
+    ApplyPerspective();
+    m_ScreenMgr->SetUpdateFlag( true );
+}
+
+// The projection shown: the model's setting, unless an axis view is showing orthographic.
+void MainVSPScreen::ApplyPerspective()
+{
+    bool persp = VehicleMgr.GetVehicle()->m_ViewPerspective() && !m_SnapOrtho;
+    m_PerspectiveMenuItem.Update( persp );
+    SetPerspective( persp );
 }
 
 void MainVSPScreen::FitView( bool all )

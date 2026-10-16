@@ -306,7 +306,7 @@ int VspGlWindow::handle( int fl_event )
         return 1;
 
     case FL_KEYDOWN:
-        if ( XfKey() )
+        if ( XfKey() || ViewKey() )
         {
             return 1;
         }
@@ -315,6 +315,10 @@ int VspGlWindow::handle( int fl_event )
     case FL_SHORTCUT:
         // G or R with the mouse over the view, even when another widget has the keyboard.
         if ( ( m_XfMode != XF_NONE || Fl::event_inside( this ) ) && XfKey() )
+        {
+            return 1;
+        }
+        if ( Fl::event_inside( this ) && ViewKey() )
         {
             return 1;
         }
@@ -2625,6 +2629,7 @@ void VspGlWindow::OnDrag( int x, int y )
             {
                 display->rotateZ( ( int )m_prevZLB.x, ( int )m_prevZLB.y, x, y );
                 UpdateRotationParms();
+                EndSnapOrtho();
             }
             m_prevZLB = glm::vec2( x, y );
         }
@@ -2664,6 +2669,7 @@ void VspGlWindow::OnDrag( int x, int y )
             {
                 display->rotate( ( int )m_prevLB.x, ( int )m_prevLB.y, x, y );
                 UpdateRotationParms();
+                EndSnapOrtho();
             }
             m_prevLB = glm::vec2( x, y );
         }
@@ -3284,6 +3290,71 @@ void VspGlWindow::GizmoDraw()
     glPopAttrib();
 
     glUseProgram( program );
+}
+
+//==== TitanVSP: Blender's view keys and auto perspective ====//
+
+bool VspGlWindow::ViewKey()
+{
+    if ( m_LinkedScreen != DrawObj::VSP_MAIN_SCREEN || m_XfMode != XF_NONE ||
+         Fl::event_state( FL_ALT | FL_META | FL_SHIFT ) )
+    {
+        return false;
+    }
+    MainVSPScreen* main = dynamic_cast< MainVSPScreen* >( m_ScreenMgr->GetScreen( vsp::VSP_MAIN_SCREEN ) );
+    if ( !main )
+    {
+        return false;
+    }
+
+    int key = Fl::event_key();
+    bool keypad = key >= FL_KP && key <= FL_KP_Last;
+    if ( keypad )
+    {
+        key -= FL_KP;
+    }
+    bool ctrl = Fl::event_ctrl() != 0;
+
+    int view = -1;
+    switch ( key )
+    {
+    case '1':
+        view = ctrl ? VSPGraphic::Common::VSP_CAM_REAR : VSPGraphic::Common::VSP_CAM_FRONT;
+        break;
+    case '3':
+        view = ctrl ? VSPGraphic::Common::VSP_CAM_RIGHT : VSPGraphic::Common::VSP_CAM_LEFT;     // Nose to the left.
+        break;
+    case '7':
+        view = ctrl ? VSPGraphic::Common::VSP_CAM_BOTTOM : VSPGraphic::Common::VSP_CAM_TOP;
+        break;
+    case '5':
+        // The number row's 5 is the View menu's shortcut; the keypad's is handled here.
+        if ( keypad && !ctrl )
+        {
+            main->TogglePerspective();
+            return true;
+        }
+        return false;
+    default:
+        return false;
+    }
+
+    main->SetView( view );
+    m_ScreenMgr->SetUpdateFlag( true );
+    return true;
+}
+
+void VspGlWindow::EndSnapOrtho()
+{
+    if ( m_LinkedScreen != DrawObj::VSP_MAIN_SCREEN )
+    {
+        return;
+    }
+    MainVSPScreen* main = dynamic_cast< MainVSPScreen* >( m_ScreenMgr->GetScreen( vsp::VSP_MAIN_SCREEN ) );
+    if ( main )
+    {
+        main->EndSnapOrtho();
+    }
 }
 
 //==== TitanVSP: keyboard move and rotate ====//

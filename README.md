@@ -33,7 +33,7 @@ previous one, so there's only ever one: the latest.
 | --- | --- |
 | **Geometry** | A **Fillet** component: smooth, watertight rolling-ball fillets at wing roots and wherever two bodies meet. A plain **Cylinder** component set by just its length and diameter. |
 | **Interface** | A dark theme throughout, including title bars and the 3D view; light component lines, with the selected component drawn brighter inside a thin white box; the Titan Dynamics logo in the 3D view. |
-| **3D view** | Click a component to select it, and Blender-style move arrows to drag it along X, Y or Z in whole units, or type **G**/**R**, an axis and a number to move or rotate it exactly. Blanks shown as balls. An orthographic/perspective switch (**View → Perspective**, key **5**) that keeps the framing, a ground grid, anti-aliasing, and a switch to hide every component's outlines. |
+| **3D view** | Click a component to select it, and Blender-style move arrows to drag it along X, Y or Z in whole units, or type **G**/**R**, an axis and a number to move or rotate it exactly. Blanks shown as balls. An orthographic/perspective switch (**View → Perspective**, key **5**) that keeps the framing, Blender's view keys (**1**/**3**/**7**) with axis views shown orthographic, a ground grid, anti-aliasing, and a switch to hide every component's outlines. |
 | **Geom Browser** | A search field that narrows the tree to matching components and selects them. |
 | **Files** | The system Open and Save dialogs by default. OpenVSP already offers them as a preference; TitanVSP only makes them the default. |
 | **VSPAERO results** | Results Manager plots you can drag to pan, wheel to zoom, and hover to read x and y, with light x = 0 and y = 0 axes. |
@@ -248,6 +248,12 @@ and Y axes in red and green. **View → Anti-aliasing** smooths the lines in the
 
 **View → Perspective** (key **5**) switches the 3D view between orthographic and perspective,
 keeping the same framing.
+
+As in Blender, snapping to an axis view shows it orthographic. That covers **View → Top**,
+**Front**, **Left**, **Bottom**, **Rear** and **Right** (**F5**–**F7**, **F9**–**F11**), and the
+Blender keys on the number row or keypad: **1** Front, **3** Left (nose to the left), **7** Top,
+and with **Ctrl** Rear, Right and Bottom. Orbit the view, pick an isometric view or press **5**, and it goes back to
+perspective, if that's what it was. Keypad **5** toggles perspective too.
 
 All four are on for new models, and each model saves its own settings.
 
