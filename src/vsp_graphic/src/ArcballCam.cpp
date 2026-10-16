@@ -344,19 +344,19 @@ glm::vec3 ArcballCam::getCOR()
 Camera::Pose ArcballCam::getPose()
 {
     Pose p;
-    p.quat = _globalQuat;
+    p.rot = _rMat;
     p.pan = _pan;
     p.cor = getCOR();
     p.zoom = _oZoom;
     return p;
 }
 
-// As load() applies a saved camera, keeping the projection type.
+// As rotateSphere() sets a rotation, keeping the projection type.
 void ArcballCam::setPose( const Pose & p )
 {
-    _globalQuat = _normalizeQuat( p.quat );
+    _rMat = p.rot;
+    _globalQuat = _matrixToQuat( _rMat );
     _pan = p.pan;
-    _rMat = _toMatrix( _globalQuat );
     _tMat = glm::translate( glm::mat4( 1.0f ), glm::vec3( _pan.x, _pan.y, 0.0f ) );
     _cMat = glm::translate( glm::mat4( 1.0f ), p.cor );
     _modelviewMatrix = _tMat * _rMat * _cMat;

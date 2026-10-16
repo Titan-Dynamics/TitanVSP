@@ -166,24 +166,27 @@ Camera::Pose Camera::blendPose( const Pose & a, const Pose & b, float t )
 {
     Pose p;
 
-    // Slerp of unit quaternions, as 4-vectors.
-    glm::vec4 qa = a.quat, qb = b.quat;
+    // Slerp of the two rotations, the shorter way round.
+    glm::quat qa = glm::quat_cast( glm::mat3( a.rot ) );
+    glm::quat qb = glm::quat_cast( glm::mat3( b.rot ) );
     float d = glm::dot( qa, qb );
     if ( d < 0.0f )
     {
         qb = -qb;
         d = -d;
     }
+    glm::quat q;
     if ( d > 0.9995f )
     {
-        p.quat = glm::normalize( qa + ( qb - qa ) * t );
+        q = glm::normalize( qa + ( qb - qa ) * t );
     }
     else
     {
         float th = acos( std::min( d, 1.0f ) );
         float s = sin( th );
-        p.quat = qa * ( sin( ( 1.0f - t ) * th ) / s ) + qb * ( sin( t * th ) / s );
+        q = qa * ( sin( ( 1.0f - t ) * th ) / s ) + qb * ( sin( t * th ) / s );
     }
+    p.rot = glm::mat4_cast( glm::normalize( q ) );
 
     p.pan = a.pan + ( b.pan - a.pan ) * t;
     p.cor = a.cor + ( b.cor - a.cor ) * t;

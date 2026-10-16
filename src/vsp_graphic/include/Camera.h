@@ -127,7 +127,7 @@ public:
     */
     struct Pose
     {
-        glm::vec4 quat;
+        glm::mat4 rot;      // The rotation itself: the camera's own quaternion loses its sign at 180 degrees.
         glm::vec2 pan;
         glm::vec3 cor;
         float zoom;

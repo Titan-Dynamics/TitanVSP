@@ -361,11 +361,11 @@ for the main window only (`m_LinkedScreen == VSP_MAIN_SCREEN`; `EditXSecWindow` 
   model to ortho). `m_ViewPerspective` is never changed by snapping.
 - **Animated views:** `MainVSPScreen::SetView( view )` (the View menu and view keys; the API's
   `SetView( viewport, view )` doesn't go through it and stays instant) calls
-  `VspGlWindow::AnimateView`. That reads the selected camera's `Camera::Pose` (quat, pan, COR,
+  `VspGlWindow::AnimateView`. That reads the selected camera's `Camera::Pose` (rotation matrix, pan, COR,
   zoom; `getPose`/`setPose` on `ArcballCam`), applies `changeView`, then with fit sets the COR to
   the visible bounding box's centre and the zoom from its corners in that view (1.15 margin), reads
   the target pose and puts the camera back. `ViewAnimCB` (60 Hz `Fl` timeout, 0.35 s, smootherstep)
-  sets `Camera::blendPose` (slerp, linear pan/COR, geometric zoom) each frame, then runs the done
+  sets `Camera::blendPose` (slerp via `glm::quat_cast`, linear pan/COR, geometric zoom; the pose keeps the matrix because `ArcballCam::_matrixToQuat` loses the sign of 180-degree turns, which flipped the Right view) each frame, then runs the done
   callback, which sets `m_SnapOrtho` for axis views. `StopViewAnim` (on `FL_PUSH`/`FL_MOUSEWHEEL`,
   or a new view) leaves the camera where it is and drops the callback; a changed selected camera
   ends the animation too.
