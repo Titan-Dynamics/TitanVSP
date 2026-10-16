@@ -315,6 +315,15 @@ bool MainVSPScreen::Update()
     // Reapplied every update: changing the window layout makes new viewports, which start
     // orthographic.
     ApplyPerspective();
+
+    // TitanVSP: frame a newly opened model (or the one given at launch) once the window is up.
+    // Zoom is model units per pixel, so it waits a moment for the window to reach its size: fitted
+    // to the small window first shown, the model would end up a speck.
+    if ( m_FitPending && !m_FitScheduled && m_FLTK_Window->shown() )
+    {
+        m_FitScheduled = true;
+        Fl::add_timeout( 0.4, FitPendingCB, this );
+    }
     m_GridMenuItem.Update( VehicleMgr.GetVehicle()->m_ViewGrid() );
     m_AntialiasMenuItem.Update( VehicleMgr.GetVehicle()->m_ViewAntialias() );
     m_OutlinesMenuItem.Update( VehicleMgr.GetVehicle()->m_ViewOutlines() );
@@ -467,6 +476,8 @@ void MainVSPScreen::ActionCB( void * data )
             BndBox bbox = VehicleMgr.GetVehicle()->GetBndBox();
             vec3d p = bbox.GetCenter();
             m_GlWin->getGraphicEngine()->getDisplay()->setCOR( (float)-p.x(), (float)-p.y(), (float)-p.z() );
+
+            m_FitPending = true;    // TitanVSP: frame the model, as F does.
         }
     }
     else if ( data == &m_SaveMenuItem )
@@ -710,9 +721,13 @@ void MainVSPScreen::ActionCB( void * data )
             }
         }
     }
-    else if ( data == &m_FitViewMenuItem || data == &m_FitAllViewMenuItem )
+    else if ( data == &m_FitViewMenuItem )
     {
-        FitView( data == &m_FitAllViewMenuItem );
+        FitViewAnimated( true );
+    }
+    else if ( data == &m_FitAllViewMenuItem )
+    {
+        FitView( true );
     }
     else if ( data == &m_ResetAllViewMenuItem )
     {
@@ -915,8 +930,9 @@ void MainVSPScreen::SetView( int view )
         break;
     }
 
-    bool fit = view != VSPGraphic::Common::VSP_CAM_CENTER;
-    m_GlWin->AnimateView( static_cast < VSPGraphic::Common::VSPenum > ( view ), fit, [this, axis]()
+    BndBox bbox;
+    bool fit = view != VSPGraphic::Common::VSP_CAM_CENTER && GetFitBndBox( bbox );
+    m_GlWin->AnimateView( static_cast < VSPGraphic::Common::VSPenum > ( view ), fit ? &bbox : nullptr, true, [this, axis]()
     {
         if ( axis && VehicleMgr.GetVehicle()->m_ViewPerspective() )
         {
@@ -959,10 +975,10 @@ void MainVSPScreen::ApplyPerspective()
     SetPerspective( persp );
 }
 
-void MainVSPScreen::FitView( bool all )
+// TitanVSP: the box Fit On Screen frames: everything visible in the model and in the mesh and
+// structure screens.
+bool MainVSPScreen::GetFitBndBox( BndBox & bbox )
 {
-    BndBox bbox;
-
     bool vehvisible = VehicleMgr.GetVehicle()->GetVisibleBndBox( bbox );
 
     bool cfdvisible = false;
@@ -1010,7 +1026,40 @@ void MainVSPScreen::FitView( bool all )
         geometryanalysisvisible = geometryAnalysisScreen->GetVisBndBox( bbox );
     }
 
-    if ( vehvisible || cfdvisible || surfvisible || structvisible || assemblyvisible || geometryanalysisvisible ) // Check for any visible objects
+    return vehvisible || cfdvisible || surfvisible || structvisible || assemblyvisible || geometryanalysisvisible;
+}
+
+void MainVSPScreen::FitPendingCB( void * data )
+{
+    MainVSPScreen * screen = static_cast< MainVSPScreen * >( data );
+    screen->m_FitScheduled = false;
+    VSPGraphic::Viewport * vp = screen->m_GlWin->getGraphicEngine()->getDisplay()->getViewport();
+    if ( !vp || vp->width() <= 0 || vp->height() <= 0 )
+    {
+        return;     // Tried again on the next update.
+    }
+    screen->m_FitPending = false;
+    screen->FitViewAnimated( false );
+}
+
+// TitanVSP: View -> Fit On Screen (F) on the selected viewport, keeping its rotation and framing the
+// visible model as the view keys do.  Animated from the menu and the key; at once on opening a file.
+void MainVSPScreen::FitViewAnimated( bool animate )
+{
+    BndBox bbox;
+    if ( m_GlWin && GetFitBndBox( bbox ) )
+    {
+        m_GlWin->AnimateView( VSPGraphic::Common::VSP_CAM_CENTER, &bbox, animate, nullptr );
+    }
+}
+
+void MainVSPScreen::FitView( bool all )
+{
+    BndBox bbox;
+
+    bool visible = GetFitBndBox( bbox );
+
+    if ( visible ) // Check for any visible objects
     {
         vec3d p = bbox.GetCenter();
         double d = bbox.DiagDist();

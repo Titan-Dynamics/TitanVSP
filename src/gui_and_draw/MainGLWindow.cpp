@@ -3300,7 +3300,7 @@ void VspGlWindow::GizmoDraw()
 
 //==== TitanVSP: animated view changes ====//
 
-void VspGlWindow::AnimateView( VSPGraphic::Common::VSPenum type, bool fit, std::function< void() > done )
+void VspGlWindow::AnimateView( VSPGraphic::Common::VSPenum type, const BndBox * fit, bool animate, std::function< void() > done )
 {
     VSPGraphic::Display * display = m_GEngine->getDisplay();
     VSPGraphic::Viewport * vp = display ? display->getViewport() : nullptr;
@@ -3322,13 +3322,12 @@ void VspGlWindow::AnimateView( VSPGraphic::Common::VSPenum type, bool fit, std::
         return;
     }
 
-    // Where the camera ends up: the view, then the model centred and framed in it.
+    // Where the camera ends up: the view, then the box centred and framed in it.
     VSPGraphic::Camera::Pose from = cam->getPose();
     cam->changeView( type );
-    BndBox bb;
-    Vehicle* veh = VehicleMgr.GetVehicle();
-    if ( fit && veh && veh->GetVisibleBndBox( bb ) && vp->width() > 0 && vp->height() > 0 )
+    if ( fit && vp->width() > 0 && vp->height() > 0 )
     {
+        const BndBox & bb = *fit;
         vec3d c = bb.GetCenter();
         cam->setCOR( -c.x(), -c.y(), -c.z() );
         cam->relativePan( 0.0f, 0.0f );
@@ -3350,6 +3349,16 @@ void VspGlWindow::AnimateView( VSPGraphic::Common::VSPenum type, bool fit, std::
         }
     }
     m_ViewAnimTo = cam->getPose();
+    if ( !animate )
+    {
+        UpdateAllViewParms();
+        redraw();
+        if ( done )
+        {
+            done();
+        }
+        return;
+    }
     cam->setPose( from );
 
     m_ViewAnimFrom = from;

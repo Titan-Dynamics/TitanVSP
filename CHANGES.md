@@ -37,7 +37,7 @@ Releases made by hand, before the workflow:
 
 | Release | What's in it |
 | --- | --- |
-| [v3.55.0-titan.8](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.8) | The current release: everything on this page. Republished under the same tag to add View → Outlines, the viewport border off by default, auto perspective, Blender's view keys and animated view changes. |
+| [v3.55.0-titan.8](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.8) | The current release: everything on this page. Republished under the same tag to add View → Outlines, the viewport border off by default, auto perspective, Blender's view keys, animated view changes and Fit On Screen, and framing a model on opening it. |
 | v3.55.0-titan.7 (withdrawn) | titan.8 without: the Cylinder component, Geom Browser search, keyboard move and rotate (G / R), the ground grid, the anti-aliasing switch, the thicker outline, and the 3D view settings (perspective, grid, anti-aliasing) on by default and saved with each model. Replaced by titan.8. |
 | v3.55.0-titan.6 (withdrawn) | titan.7 without `CHANGES.md` in the zip. Replaced by titan.7. |
 | v3.55.0-titan.5 (withdrawn) | titan.6 without perspective by default, saved with each model. Replaced by titan.6. |
@@ -200,6 +200,11 @@ of jumping. The rotation, centre, pan and zoom ease in and out together. Every v
 also centres the visible model and zooms so that it fills the view with a small margin. An axis
 view switches to orthographic when the camera arrives. A click or the mouse wheel in the view
 stops the animation where it is. Scripts' `SetView` is unchanged and still jumps.
+
+**Fit On Screen.** **View → Fit On Screen** (**F**) animates too, keeping the view's direction and
+framing the visible model the same way, from its extent in that view rather than its bounding
+sphere, so it fills more of the window. **Fit All** and scripts' `FitAllViews` are unchanged.
+Opening a model, from **File → Open** or at launch, frames it at once.
 
 ## Geom Browser search
 

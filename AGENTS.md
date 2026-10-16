@@ -369,6 +369,13 @@ for the main window only (`m_LinkedScreen == VSP_MAIN_SCREEN`; `EditXSecWindow` 
   callback, which sets `m_SnapOrtho` for axis views. `StopViewAnim` (on `FL_PUSH`/`FL_MOUSEWHEEL`,
   or a new view) leaves the camera where it is and drops the callback; a changed selected camera
   ends the animation too.
+- **Fit:** `AnimateView` takes the box to fit (`MainVSPScreen::GetFitBndBox`, the visible
+  model plus the mesh and structure screens' boxes, as upstream's `FitView` gathers) and whether
+  to animate. F calls `FitViewAnimated( true )`, which is `AnimateView( VSP_CAM_CENTER, box )`:
+  `changeView( CENTER )` keeps the rotation. Fit All and the API keep upstream's `FitView`. Opening a
+  file (and launch) sets `m_FitPending`; `Update` then schedules `FitPendingCB` 0.4 s after the
+  window is shown, which fits without animating. The wait matters: zoom is units per pixel, and
+  fitting to the small window first shown left the model a speck.
 - **View keys:** `VspGlWindow::ViewKey` (on `FL_KEYDOWN`, and `FL_SHORTCUT` with the mouse over the
   window): 1/3/7 on the number row or keypad call `MainVSPScreen::SetView` with Front/Left/Top, or
   with Ctrl Rear/Right/Bottom (3 shows the nose to the left); keypad 5 calls `TogglePerspective`. Main window only, not during G/R.

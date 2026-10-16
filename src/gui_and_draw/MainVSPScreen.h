@@ -53,6 +53,8 @@ public:
     void SetView( int viewport, int view );
     void SetView( int view );
     void FitView( bool all );
+    bool GetFitBndBox( BndBox & bbox );     // TitanVSP: what Fit On Screen frames.
+    void FitViewAnimated( bool animate );   // TitanVSP: F, and on opening a file.
     void AlignView( const vec3d & v );
     void AlignViewToGeom( string geom_id );
     void ResetViews();
@@ -198,7 +200,10 @@ protected:
     bool m_ShowXYZArrow;
     bool m_ShowBorder;
     bool m_Perspective;
-    bool m_SnapOrtho = false;   // Showing an axis view orthographic, in place of perspective.
+    bool m_SnapOrtho = false;
+    bool m_FitPending = true;   // Fit the model once the view has a size: at launch, and on opening a file.
+    bool m_FitScheduled = false;
+    static void FitPendingCB( void * data );   // Showing an axis view orthographic, in place of perspective.
 };
 
 

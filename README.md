@@ -257,7 +257,8 @@ perspective, if that's what it was. Keypad **5** toggles perspective too.
 
 Picking a view from the menu or the keys turns the camera to it smoothly, with the visible model
 centred and framed, and only then switches to orthographic. Click or scroll in the view to stop
-it where it is.
+it where it is. **View → Fit On Screen** (**F**) animates the same way, keeping the view's
+direction, and opening a file frames its model at once.
 
 All four are on for new models, and each model saves its own settings.
 

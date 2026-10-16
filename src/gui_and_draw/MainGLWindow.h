@@ -11,6 +11,7 @@
 #include <glm/glm.hpp>
 
 #include "Vec3d.h"
+#include "BndBox.h"
 #include "Common.h"
 #include "Camera.h"
 
@@ -152,10 +153,11 @@ public:
     void UpdateRotationParms();
     void UpdateAllViewParms();
 
-    // TitanVSP: turns the selected viewport's camera to a view over a fraction of a second.  With
-    // fit, it also centres the visible model and zooms to frame it in that view.  done runs once
-    // the camera arrives, unless another view change or the mouse interrupts it.
-    void AnimateView( VSPGraphic::Common::VSPenum type, bool fit, std::function< void() > done );
+    // TitanVSP: turns the selected viewport's camera to a view over a fraction of a second, or
+    // at once without animate.  With fit, it also centres that box and zooms to frame it in the
+    // view; VSP_CAM_CENTER keeps the rotation, so it just fits.  done runs once the camera
+    // arrives, unless another view change or the mouse interrupts it.
+    void AnimateView( VSPGraphic::Common::VSPenum type, const BndBox * fit, bool animate, std::function< void() > done );
     void StopViewAnim();
 
 // Private helper functions.
