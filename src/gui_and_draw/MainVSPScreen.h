@@ -121,6 +121,7 @@ protected:
     VSPCheckMenuItem m_PerspectiveMenuItem;
     VSPCheckMenuItem m_GridMenuItem;
     VSPCheckMenuItem m_AntialiasMenuItem;
+    VSPCheckMenuItem m_OutlinesMenuItem;
 
     ActionMenuItem m_TopMenuItem;
     ActionMenuItem m_FrontMenuItem;

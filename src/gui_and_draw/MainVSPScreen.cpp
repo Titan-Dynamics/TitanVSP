@@ -139,6 +139,7 @@ MainVSPScreen::MainVSPScreen( ScreenMgr* mgr ) : ActionScreen( mgr )
     m_PerspectiveMenuItem.Init( this, m_MenuBar, "View/Perspective", '5' );
     m_GridMenuItem.Init( this, m_MenuBar, "View/Grid" );
     m_AntialiasMenuItem.Init( this, m_MenuBar, "View/Anti-aliasing" );
+    m_OutlinesMenuItem.Init( this, m_MenuBar, "View/Outlines" );
     m_SetCORMenuItem.Init( this, m_MenuBar, "View/Set Rotation Center", 'r' );
     m_SetVNMenuItem.Init( this, m_MenuBar, "View/View Normal To", 'n' );
     m_AlignGeomMenuItem.Init( this, m_MenuBar, "View/View Front Of" );   // TitanVSP: x is for G/R.
@@ -316,6 +317,7 @@ bool MainVSPScreen::Update()
     m_PerspectiveMenuItem.Update( persp );
     m_GridMenuItem.Update( VehicleMgr.GetVehicle()->m_ViewGrid() );
     m_AntialiasMenuItem.Update( VehicleMgr.GetVehicle()->m_ViewAntialias() );
+    m_OutlinesMenuItem.Update( VehicleMgr.GetVehicle()->m_ViewOutlines() );
     m_GlWin->getGraphicEngine()->getDisplay()->setLineSmooth( VehicleMgr.GetVehicle()->m_ViewAntialias() );
     SetPerspective( persp );
 
@@ -611,6 +613,12 @@ void MainVSPScreen::ActionCB( void * data )
     {
         Vehicle* veh = VehicleMgr.GetVehicle();
         veh->m_ViewAntialias.Set( !veh->m_ViewAntialias() );
+        m_ScreenMgr->SetUpdateFlag( true );
+    }
+    else if ( data == &m_OutlinesMenuItem )
+    {
+        Vehicle* veh = VehicleMgr.GetVehicle();
+        veh->m_ViewOutlines.Set( !veh->m_ViewOutlines() );
         m_ScreenMgr->SetUpdateFlag( true );
     }
     else if ( data == &m_GridMenuItem )

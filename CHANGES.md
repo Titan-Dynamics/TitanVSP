@@ -25,9 +25,19 @@ length unit. Models keep whatever they were saved with.
 
 ## Releases
 
+Releases are automatic. Every push to `main` is built on GitHub Actions
+([`.github/workflows/release.yml`](.github/workflows/release.yml)) and published as the next
+release, `v3.55.0-titan.<n>`, with the Windows zip attached and its SHA-256 in the notes. The
+previous release and its tag are then deleted, so the
+[Releases](https://github.com/Titan-Dynamics/TitanVSP/releases) page always has one release, built
+from the latest `main`, with everything on this page. The notes come from
+[`.github/release-notes.md`](.github/release-notes.md).
+
+Before releases were automatic (all since replaced):
+
 | Release | What's in it |
 | --- | --- |
-| [v3.55.0-titan.8](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.8) | Everything on this page. |
+| v3.55.0-titan.8 | Everything on this page except **View → Outlines**. The last release made by hand. |
 | v3.55.0-titan.7 (withdrawn) | titan.8 without: the Cylinder component, Geom Browser search, keyboard move and rotate (G / R), the ground grid, the anti-aliasing switch, the thicker outline, and the 3D view settings (perspective, grid, anti-aliasing) on by default and saved with each model. Replaced by titan.8. |
 | v3.55.0-titan.6 (withdrawn) | titan.7 without `CHANGES.md` in the zip. Replaced by titan.7. |
 | v3.55.0-titan.5 (withdrawn) | titan.6 without perspective by default, saved with each model. Replaced by titan.6. |
@@ -122,9 +132,12 @@ hide it.
 multisampling isn't available and wireframes come out jagged. The black outline drawn along a
 component's edges is 2 px instead of 1.
 
-**Saved per model.** Perspective, Grid and Anti-aliasing are all on for new models (and for files
+**Outlines.** **View → Outlines** shows or hides the black outlines (feature lines) of every
+component at once. The Geom Browser's per-component **Feature** toggle still applies when it's on.
+
+**Saved per model.** Perspective, Grid, Anti-aliasing and Outlines are all on for new models (and for files
 saved before they existed), and each model saves its own settings, so a file reopens the way it
-was left. They're the Vehicle's `Perspective`, `Grid` and `Antialias` settings, in the
+was left. They're the Vehicle's `Perspective`, `Grid`, `Antialias` and `Outlines` settings, in the
 `ViewSettings` group.
 
 **Click to select.** Clicking a component in the 3D view selects it, as if picked in the Geom
@@ -262,6 +275,8 @@ it scales smoothly at any window size. Other 3D windows, such as the XSec View, 
   it next to the repo. `-Clean` and `-CleanAll` rebuild from scratch.
 - `dev\run.ps1` does an incremental build and launches `vsp.exe`. `-NoBuild` just launches it.
 - `dev\install-shortcut.ps1` adds a one-click "TitanVSP (Dev)" shortcut that runs `run.ps1`.
+- Every push to `main` builds and publishes a release, replacing the previous one; see
+  [Releases](#releases).
 - The install folder and release zip include `CHANGES.md` alongside `README.md`, so the list of
   TitanVSP's changes ships with the program.
 - The Windows build enables the Python API and sets up a venv with the `openvsp` package installed

@@ -50,7 +50,8 @@ powershell -ExecutionPolicy Bypass -File dev\run.ps1     # build, then launch vs
   with the Release exe (`..\OpenVSP-build\vsp\vsp\Release\`).
 - The release zip comes from
   `cmake --build ..\OpenVSP-build\vsp --config Release --target PACKAGE`, which writes
-  `..\OpenVSP-build\vsp\TitanVSP-3.55.0-win64.zip`.
+  `..\OpenVSP-build\vsp\TitanVSP-3.55.0-win64.zip`. Published releases are built by GitHub Actions
+  instead; see [Releases](#releases).
 
 **Testing.** OpenVSP's test suites aren't wired into the dev build. Changes are checked by running
 them:
@@ -292,7 +293,10 @@ passes it to `Display::setLineSmooth`, which hands it to `LayoutMgr`. `LayoutMgr
 `GL_LINE_SMOOTH` for the scene pass (multisampling isn't always granted), and `predraw` always
 disables it so pick colours stay exact.
 
-**View settings:** `m_ViewPerspective`, `m_ViewGrid` and `m_ViewAntialias` are Vehicle BoolParms in
+**Outlines:** View → Outlines sets `Vehicle::m_ViewOutlines`, which `Geom::LoadDrawObjs` ANDs into
+each feature-line DrawObj's visibility, on top of the Geom's own `DispFeatureFlag`.
+
+**View settings:** `m_ViewPerspective`, `m_ViewGrid`, `m_ViewAntialias` and `m_ViewOutlines` are Vehicle BoolParms in
 `ViewSettings`, all default on, saved in the `.vsp3`. Feature lines
 (`m_FeatureDrawObj_vec`, the black edge outline) are 2 px.
 
@@ -434,11 +438,19 @@ git diff --binary OpenVSP_3.55.0 OpenVSP_3.56.0 | git apply -3
 
 Resolve conflicts in the files TitanVSP touches, then rebuild and re-check fillets, the theme and
 the view. Never push upstream's tags to this repository. When the version changes, update the
-version numbers in [README.md](README.md), [CHANGES.md](CHANGES.md) and the release zip name.
+version numbers in [README.md](README.md), [CHANGES.md](CHANGES.md) and
+[`.github/release-notes.md`](.github/release-notes.md); the release workflow takes the version from
+the zip name.
 
 ## Releases
 
-Releases are on GitHub, tagged `v<openvsp version>-titan.<n>` (e.g. `v3.55.0-titan.8`), with the
-`PACKAGE` zip attached and its SHA-256 in the notes. Make a new tag for each release rather than
-moving an old one, and delete the release it replaces only when asked. Keep the release table at
-the top of [CHANGES.md](CHANGES.md) current, including what's on `main` but not yet released.
+Releases are automatic: every push to `main` runs
+[`.github/workflows/release.yml`](.github/workflows/release.yml) on a Windows runner. It builds the
+libraries and the `PACKAGE` zip with the same options as `devuild.ps1`, publishes it as the next
+tag, `v<openvsp version>-titan.<n+1>` (e.g. `v3.55.0-titan.9` after `titan.8`), then deletes every
+other `-titan.` release and its tag. A newer push cancels a build still running. Don't create or
+delete releases by hand, and don't move tags.
+
+The release notes are [`.github/release-notes.md`](.github/release-notes.md); the workflow appends
+the commit and the zip's SHA-256. Keep its "Recently added" list current with each user-facing
+change, along with README.md and CHANGES.md.

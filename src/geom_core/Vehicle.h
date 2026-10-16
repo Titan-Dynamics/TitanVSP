@@ -630,6 +630,7 @@ public:
     BoolParm m_ViewPerspective;     // Perspective instead of orthographic.
     BoolParm m_ViewGrid;            // The ground grid.
     BoolParm m_ViewAntialias;       // Smoothed lines.
+    BoolParm m_ViewOutlines;        // The feature lines (black outlines) of every Geom.
 
     BoolParm m_STLResOverride;
     IntParm m_STLTessU;         // Tess_U, for Geoms without sections (pods, fillets, ...).

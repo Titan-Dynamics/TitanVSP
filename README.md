@@ -5,15 +5,17 @@ NASA's parametric aircraft geometry tool. It adds a **Fillet** component that bl
 fuselages into each other with smooth rolling-ball fillets, and reworks the day-to-day
 experience: a dark interface, a perspective 3D view, the Windows file dialogs, VSPAERO results you
 can pan, zoom and read values from, a VSPAERO Viewer that handles like the main 3D view and saves
-high-resolution images, and more control over exports. Windows scripts build and launch it in one
-step.
+high-resolution images, Blender-style selecting, moving and rotating in the 3D view, a searchable
+Geom Browser, a plain Cylinder component, and more control over exports. Windows scripts build and
+launch it in one step.
 
 Models, scripts and the `openvsp` Python API work as they do in OpenVSP 3.55.0.
 
 **What's changed:** every change from upstream OpenVSP is listed in [CHANGES.md](CHANGES.md).
 
 **Download:** a ready-to-run Windows build is on the
-[Releases](https://github.com/Titan-Dynamics/TitanVSP/releases) page.
+[Releases](https://github.com/Titan-Dynamics/TitanVSP/releases) page. Every push to `main` is
+built and published there automatically, replacing the previous release, so it's always current.
 
 - [Highlights](#highlights)
 - [About OpenVSP](#about-openvsp)
@@ -30,7 +32,8 @@ Models, scripts and the `openvsp` Python API work as they do in OpenVSP 3.55.0.
 | --- | --- |
 | **Geometry** | A **Fillet** component: smooth, watertight rolling-ball fillets at wing roots and wherever two bodies meet. A plain **Cylinder** component set by just its length and diameter. |
 | **Interface** | A dark theme throughout, including title bars and the 3D view; light component lines, with the selected component drawn brighter inside a thin white box; the Titan Dynamics logo in the 3D view. |
-| **3D view** | Click a component to select it, and Blender-style move arrows to drag it along X, Y or Z in whole units. Blanks shown as balls. An orthographic/perspective switch (**View → Perspective**, key **5**) that keeps the framing. |
+| **3D view** | Click a component to select it, and Blender-style move arrows to drag it along X, Y or Z in whole units, or type **G**/**R**, an axis and a number to move or rotate it exactly. Blanks shown as balls. An orthographic/perspective switch (**View → Perspective**, key **5**) that keeps the framing, a ground grid, anti-aliasing, and a switch to hide every component's outlines. |
+| **Geom Browser** | A search field that narrows the tree to matching components and selects them. |
 | **Files** | The Windows Open and Save dialogs for every open, save, import and export. |
 | **VSPAERO results** | Results Manager plots you can drag to pan, wheel to zoom, and hover to read x and y, with light x = 0 and y = 0 axes. |
 | **VSPAERO Viewer** | A dark theme, the main 3D view's mouse controls, and PNG export at any width through the Save dialog. |
@@ -236,15 +239,16 @@ Drag an arrow to move the component along that axis; it moves in whole units. Wi
 components selected, they all move together. An axis pointing straight at you is hidden, so turn
 the view to move along it.
 
-### Perspective view
+### View settings
 
 **View → Grid** shows a ground grid on the XY plane that fades out around the model, with the X
 and Y axes in red and green. **View → Anti-aliasing** smooths the lines in the 3D view.
+**View → Outlines** shows or hides the black outlines (feature lines) of every component at once.
 
 **View → Perspective** (key **5**) switches the 3D view between orthographic and perspective,
 keeping the same framing.
 
-All three are on for new models, and each model saves its own settings.
+All four are on for new models, and each model saves its own settings.
 
 ### Geom Browser search
 
@@ -297,7 +301,8 @@ window. **View → Use White Background** switches to a white background for pri
 ### Windows dev scripts
 
 `dev\build.ps1`, `dev\run.ps1` and `dev\install-shortcut.ps1`, described
-[above](#build-and-run).
+[above](#build-and-run). Releases are built by GitHub Actions on every push to `main`
+(`.github/workflows/release.yml`).
 
 ### Python API in the dev build
 

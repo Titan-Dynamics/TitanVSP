@@ -4567,7 +4567,8 @@ void Geom::LoadDrawObjs( vector< DrawObj* > & draw_obj_vec )
     // Load Feature Lines
     for ( int i = 0; i < m_FeatureDrawObj_vec.size(); i++ )
     {
-        m_FeatureDrawObj_vec[i].m_Visible = m_GuiDraw.GetDisplayType() == DISPLAY_TYPE::DISPLAY_BEZIER && m_GuiDraw.GetDispFeatureFlag() && GetSetFlag( vsp::SET_SHOWN );
+        // TitanVSP: View -> Outlines hides them all at once.
+        m_FeatureDrawObj_vec[i].m_Visible = m_GuiDraw.GetDisplayType() == DISPLAY_TYPE::DISPLAY_BEZIER && m_GuiDraw.GetDispFeatureFlag() && GetSetFlag( vsp::SET_SHOWN ) && m_Vehicle->m_ViewOutlines();
         draw_obj_vec.push_back( &m_FeatureDrawObj_vec[i] );
     }
 

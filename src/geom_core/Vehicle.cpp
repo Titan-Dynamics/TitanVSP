@@ -270,6 +270,9 @@ Vehicle::Vehicle()
     m_ViewAntialias.Init( "Antialias", "ViewSettings", this, true, 0, 1 );
     m_ViewAntialias.SetDescript( "Smooth the lines in the main 3D view" );
 
+    m_ViewOutlines.Init( "Outlines", "ViewSettings", this, true, 0, 1 );
+    m_ViewOutlines.SetDescript( "Show the feature lines (outlines) of every component; each one's own Feature toggle still applies" );
+
     m_STLResOverride.Init( "ResOverride", "STLSettings", this, false, 0, 1 );
     m_STLResOverride.SetDescript( "Export the STL with the tessellation below instead of each Geom's own" );
     m_STLTessU.Init( "TessU", "STLSettings", this, 16, 2, 1000 );
