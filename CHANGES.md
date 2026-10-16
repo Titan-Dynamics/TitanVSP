@@ -14,6 +14,8 @@ length unit. Models keep whatever they were saved with.
 - [Cylinder component](#cylinder-component)
 - [Dark theme](#dark-theme)
 - [3D view](#3d-view)
+- [Geom Browser search](#geom-browser-search)
+- [Open Recent](#open-recent)
 - [System file dialogs by default](#system-file-dialogs-by-default)
 - [VSPAERO results plots](#vspaero-results-plots)
 - [VSPAERO Viewer](#vspaero-viewer)
@@ -37,7 +39,7 @@ Releases made by hand, before the workflow:
 
 | Release | What's in it |
 | --- | --- |
-| [v3.55.0-titan.8](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.8) | The current release: everything on this page. Republished under the same tag to add View → Outlines, the viewport border off by default, auto perspective, Blender's view keys, animated view changes and Fit On Screen, framing a model on opening it, and Blender's selection keys with the shortcuts popup. |
+| [v3.55.0-titan.8](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.8) | The current release: everything on this page. Republished under the same tag to add View → Outlines, the viewport border off by default, auto perspective, Blender's view keys, animated view changes and Fit On Screen, framing a model on opening it, Blender's selection keys with the shortcuts popup, and File → Open Recent. |
 | v3.55.0-titan.7 (withdrawn) | titan.8 without: the Cylinder component, Geom Browser search, keyboard move and rotate (G / R), the ground grid, the anti-aliasing switch, the thicker outline, and the 3D view settings (perspective, grid, anti-aliasing) on by default and saved with each model. Replaced by titan.8. |
 | v3.55.0-titan.6 (withdrawn) | titan.7 without `CHANGES.md` in the zip. Replaced by titan.7. |
 | v3.55.0-titan.5 (withdrawn) | titan.6 without perspective by default, saved with each model. Replaced by titan.6. |
@@ -240,6 +242,15 @@ belongs; collapsed branches open to show the matches inside. **Enter** selects e
 Clearing the field brings the whole tree back. The tree is rebuilt once typing pauses for 0.2 s
 (Enter rebuilds at once), with an ID lookup rather than a walk of the tree for each row, so it
 stays quick with thousands of components.
+
+## Open Recent
+
+**File → Open Recent** lists the last ten models opened or saved, newest first, by full path.
+Picking one opens it as File → Open does. A model joins the list whenever the model's file name
+changes to a file that exists: File → Open, Open Recent, Save As, a file given at launch, or a
+script. **Clear Recent** empties the list. A file that has gone is taken off the list, with a
+message, when it's picked. The list is kept in the preferences store (`openvsp.org`/`VSP`,
+`RecentFiles` group), so it lasts between sessions.
 
 ## System file dialogs by default
 

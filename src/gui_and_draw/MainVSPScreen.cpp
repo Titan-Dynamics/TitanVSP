@@ -27,6 +27,8 @@
 #include "Viewport.h"
 #include "Background.h"
 #include <FL/fl_ask.H>
+#include <FL/filename.H>
+#include <FL/Fl_Preferences.H>
 #include "CloneDeleteDialog.h"
 #include "ManageCORScreen.h"
 #include "ManageGeomScreen.h"
@@ -95,6 +97,7 @@ MainVSPScreen::MainVSPScreen( ScreenMgr* mgr ) : ActionScreen( mgr )
 
     m_NewMenuItem.Init( this, m_MenuBar, "File/New" );
     m_OpenMenuItem.Init( this, m_MenuBar, "File/Open..." );
+    m_MenuBar->add( "File/Open Recent", 0, nullptr, nullptr, FL_SUBMENU );     // TitanVSP; filled below.
     m_SaveMenuItem.Init( this, m_MenuBar, "File/Save...", FL_COMMAND + 's' );
     m_SaveAsMenuItem.Init( this, m_MenuBar, "File/Save As..." );
     m_SaveSetMenuItem.Init( this, m_MenuBar, "File/Save Set..." );
@@ -107,6 +110,9 @@ MainVSPScreen::MainVSPScreen( ScreenMgr* mgr ) : ActionScreen( mgr )
     m_ExitMenuItem.Init( this, m_MenuBar, "File/Exit" );
     m_StopGUIMenuItem.Init( this, m_MenuBar, "File/Stop GUI" );
     m_StopGUIMenuItem.Hide();
+
+    LoadRecentFiles();
+    RebuildRecentMenu();
 
     m_UndoMenuItem.Init( this, m_MenuBar, "Edit/Undo Parameter Change", FL_COMMAND + 'z' );
     m_CutMenuItem.Init( this, m_MenuBar, "Edit/Cut", FL_COMMAND + 'x' );
@@ -308,6 +314,14 @@ bool MainVSPScreen::Update()
 
     SetFileLabel( VehicleMgr.GetVehicle()->GetVSP3FileName() );
 
+    // TitanVSP: a model opened or saved under a new name goes on File -> Open Recent.
+    string fname = VehicleMgr.GetVehicle()->GetVSP3FileName();
+    if ( fname != m_RecentSeen && FileExist( fname ) )
+    {
+        m_RecentSeen = fname;
+        AddRecentFile( fname );
+    }
+
     m_AxisMenuItem.Update( m_ShowXYZArrow );
     m_BorderMenuItem.Update( m_ShowBorder );
     SetShowBorders( m_ShowBorder );     // TitanVSP: new viewports start with borders on.
@@ -379,6 +393,200 @@ void MainVSPScreen::CloseCallBack( Fl_Widget *w )
     {
         ExitVSP();
     }
+}
+
+// File -> Open, and Open Recent.
+void MainVSPScreen::OpenVSPFile( const string & openfile )
+{
+    VehicleMgr.GetVehicle()->Renew();
+    VehicleMgr.GetVehicle()->SetVSP3FileName( openfile );
+    VehicleMgr.GetVehicle()->ReadXMLFile( openfile );
+
+    if ( VehicleMgr.GetVehicle()->m_ShowNotesScreenParm.Get() )
+    {
+        m_ScreenMgr->ShowScreen( vsp::VSP_VEH_NOTES_SCREEN );
+    }
+
+    BndBox bbox = VehicleMgr.GetVehicle()->GetBndBox();
+    vec3d p = bbox.GetCenter();
+    m_GlWin->getGraphicEngine()->getDisplay()->setCOR( (float)-p.x(), (float)-p.y(), (float)-p.z() );
+
+    m_FitPending = true;    // TitanVSP: frame the model, as F does.
+    m_ScreenMgr->SetUpdateFlag( true );
+}
+
+//==== TitanVSP: File -> Open Recent ====//
+
+namespace
+{
+const int MAX_RECENT = 10;
+
+// The same file, whatever the case or slashes (Windows file names ignore case).
+string RecentKey( const string & f )
+{
+    string k = f;
+    for ( char & c : k )
+    {
+        c = ( c == '/' ) ? '\\' : ( char )tolower( ( unsigned char )c );
+    }
+    return k;
+}
+
+// A file name as a menu label: add() reads '/' as a submenu and '\\' as an escape, and labels
+// read '&' as a shortcut marker.
+string MenuLabel( const string & f )
+{
+    string s;
+    for ( char c : f )
+    {
+        if ( c == '\\' || c == '/' )
+        {
+            s += "\\\\";
+        }
+        else if ( c == '&' )
+        {
+            s += "&&";
+        }
+        else if ( c == '_' && s.empty() )
+        {
+            s += "\\_";
+        }
+        else
+        {
+            s += c;
+        }
+    }
+    return s;
+}
+}
+
+void MainVSPScreen::LoadRecentFiles()
+{
+    m_RecentFiles.clear();
+    Fl_Preferences prefs( Fl_Preferences::USER, "openvsp.org", "VSP" );
+    Fl_Preferences recent( prefs, "RecentFiles" );
+    int n = 0;
+    recent.get( "Count", n, 0 );
+    for ( int i = 0; i < n && i < MAX_RECENT; i++ )
+    {
+        char * buf = nullptr;
+        recent.get( ( "File" + std::to_string( i ) ).c_str(), buf, "" );
+        if ( buf )
+        {
+            if ( buf[0] )
+            {
+                m_RecentFiles.push_back( buf );
+            }
+            free( buf );
+        }
+    }
+}
+
+void MainVSPScreen::SaveRecentFiles()
+{
+    Fl_Preferences prefs( Fl_Preferences::USER, "openvsp.org", "VSP" );
+    Fl_Preferences recent( prefs, "RecentFiles" );
+    recent.clear();
+    recent.set( "Count", ( int )m_RecentFiles.size() );
+    for ( int i = 0; i < ( int )m_RecentFiles.size(); i++ )
+    {
+        recent.set( ( "File" + std::to_string( i ) ).c_str(), m_RecentFiles[i].c_str() );
+    }
+    prefs.flush();
+}
+
+// To the top of the list, once, as a full path.  Only files that exist: not "Unnamed.vsp3".
+void MainVSPScreen::AddRecentFile( const string & fname )
+{
+    if ( fname.empty() )
+    {
+        return;
+    }
+    char abs[ FL_PATH_MAX ];
+    fl_filename_absolute( abs, sizeof( abs ), fname.c_str() );
+    string f = abs;
+    for ( char & c : f )
+    {
+        if ( c == '/' )
+        {
+            c = '\\';
+        }
+    }
+    if ( !FileExist( f ) )
+    {
+        return;
+    }
+    string key = RecentKey( f );
+    for ( int i = 0; i < ( int )m_RecentFiles.size(); i++ )
+    {
+        if ( RecentKey( m_RecentFiles[i] ) == key )
+        {
+            if ( i == 0 && m_RecentFiles[0] == f )
+            {
+                return;     // Already first.
+            }
+            m_RecentFiles.erase( m_RecentFiles.begin() + i );
+            break;
+        }
+    }
+    m_RecentFiles.insert( m_RecentFiles.begin(), f );
+    if ( ( int )m_RecentFiles.size() > MAX_RECENT )
+    {
+        m_RecentFiles.resize( MAX_RECENT );
+    }
+    SaveRecentFiles();
+    RebuildRecentMenu();
+}
+
+void MainVSPScreen::RebuildRecentMenu()
+{
+    int idx = m_MenuBar->find_index( "File/Open Recent" );
+    if ( idx < 0 )
+    {
+        return;
+    }
+    m_MenuBar->clear_submenu( idx );
+    if ( m_RecentFiles.empty() )
+    {
+        m_MenuBar->add( "File/Open Recent/(none)", 0, nullptr, nullptr, FL_MENU_INACTIVE );
+        return;
+    }
+    for ( int i = 0; i < ( int )m_RecentFiles.size(); i++ )
+    {
+        m_RecentItems[i].m_Screen = this;
+        m_RecentItems[i].m_Index = i;
+        int flags = ( i == ( int )m_RecentFiles.size() - 1 ) ? FL_MENU_DIVIDER : 0;
+        m_MenuBar->add( ( "File/Open Recent/" + MenuLabel( m_RecentFiles[i] ) ).c_str(), 0, RecentCB, &m_RecentItems[i], flags );
+    }
+    m_MenuBar->add( "File/Open Recent/Clear Recent", 0, ClearRecentCB, this );
+}
+
+void MainVSPScreen::RecentCB( Fl_Widget *, void * data )
+{
+    RecentItem * item = static_cast< RecentItem * >( data );
+    MainVSPScreen * screen = item->m_Screen;
+    if ( item->m_Index >= ( int )screen->m_RecentFiles.size() )
+    {
+        return;
+    }
+    string f = screen->m_RecentFiles[ item->m_Index ];
+    if ( !FileExist( f ) )
+    {
+        fl_alert( "%s can't be found.  It's been taken off the list.", f.c_str() );
+        screen->m_RecentFiles.erase( screen->m_RecentFiles.begin() + item->m_Index );
+        screen->SaveRecentFiles();
+        screen->RebuildRecentMenu();
+        return;
+    }
+    screen->OpenVSPFile( f );
+}
+
+void MainVSPScreen::ClearRecentCB( Fl_Widget *, void * data )
+{
+    MainVSPScreen * screen = static_cast< MainVSPScreen * >( data );
+    screen->m_RecentFiles.clear();
+    screen->SaveRecentFiles();
+    screen->RebuildRecentMenu();
 }
 
 void MainVSPScreen::SetFileLabel( const string &fname )
@@ -464,20 +672,7 @@ void MainVSPScreen::ActionCB( void * data )
         string openfile = m_ScreenMgr->FileChooser( "Open VSP File", "*.vsp3" );
         if ( openfile.compare( "" ) != 0 )
         {
-            VehicleMgr.GetVehicle()->Renew();
-            VehicleMgr.GetVehicle()->SetVSP3FileName( openfile );
-            VehicleMgr.GetVehicle()->ReadXMLFile( openfile );
-
-            if ( VehicleMgr.GetVehicle()->m_ShowNotesScreenParm.Get() )
-            {
-                m_ScreenMgr->ShowScreen( vsp::VSP_VEH_NOTES_SCREEN );
-            }
-
-            BndBox bbox = VehicleMgr.GetVehicle()->GetBndBox();
-            vec3d p = bbox.GetCenter();
-            m_GlWin->getGraphicEngine()->getDisplay()->setCOR( (float)-p.x(), (float)-p.y(), (float)-p.z() );
-
-            m_FitPending = true;    // TitanVSP: frame the model, as F does.
+            OpenVSPFile( openfile );
         }
     }
     else if ( data == &m_SaveMenuItem )

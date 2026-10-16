@@ -7,6 +7,7 @@ Each new release replaces the previous one, so this is always the latest TitanVS
 ### Recently added
 
 - **Blender's keys and a shortcuts popup:** **G**/**R** now follow the mouse (**X**/**Y**/**Z** to hold an axis, a number for an exact amount, **Ctrl** to snap), plus **Shift+D** duplicate, **X**/**Delete** delete (asks first), **A**/**Alt+A** select all or none, **H**/**Shift+H**/**Alt+H** hide and show, **Z**/**Shift+Z** wireframe or shaded, **2 4 6 8** orbit, **9** other side, **Home** / numpad **.** fit, **C** centre, and **Ctrl**+click to add to the selection. A keyboard button in the 3D view's corner lists them all.
+- **File → Open Recent:** the last ten models opened or saved, kept between sessions.
 - **Outlines switch:** **View → Outlines** shows or hides the black outlines of every component at once.
 - **Auto perspective, as in Blender:** Top, Front, Left, Bottom, Rear and Right (**F5**–**F7**, **F9**–**F11**) show orthographic; orbit the view and it goes back to perspective, if it was. Blender's view keys work too: **1** Front, **3** Left (nose to the left), **7** Top, **Ctrl** for the opposite side, keypad **5** for perspective.
 - **Animated view changes:** View menu views and the view keys turn the camera smoothly, centring and framing the model, then switch to orthographic for axis views. **F** (Fit On Screen) animates too, and opening a file frames its model. Click or scroll to stop an animation.

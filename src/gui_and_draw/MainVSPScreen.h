@@ -91,6 +91,24 @@ protected:
 
     void SetFileLabel( const string &fname );
 
+    // TitanVSP: File -> Open Recent.  The last models opened or saved, newest first, kept in the
+    // preferences store so they last between sessions.
+    void OpenVSPFile( const string & fname );
+    void LoadRecentFiles();
+    void SaveRecentFiles();
+    void AddRecentFile( const string & fname );
+    void RebuildRecentMenu();
+    static void RecentCB( Fl_Widget * w, void * data );
+    static void ClearRecentCB( Fl_Widget * w, void * data );
+    vector< string > m_RecentFiles;
+    string m_RecentSeen;        // The model's file name last time Update looked.
+    struct RecentItem
+    {
+        MainVSPScreen * m_Screen;
+        int m_Index;
+    };
+    RecentItem m_RecentItems[10];
+
     virtual void NewModel();
     virtual void ExitVSP();
 

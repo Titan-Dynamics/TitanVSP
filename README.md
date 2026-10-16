@@ -35,7 +35,7 @@ previous one, so there's only ever one: the latest.
 | **Interface** | A dark theme throughout, including title bars and the 3D view; light component lines, with the selected component drawn brighter inside a thin white box; the Titan Dynamics logo in the 3D view. |
 | **3D view** | Click a component to select it, and Blender-style move arrows to drag it along X, Y or Z in whole units, or Blender's keys: **G**/**R** to move or rotate with the mouse (an axis and a number for exact amounts), **Shift+D** to duplicate, **A**/**H**/**Z** to select, hide and switch wireframe, **X** to delete. A keyboard button in the corner lists them all. Blanks shown as balls. An orthographic/perspective switch (**View → Perspective**, key **5**) that keeps the framing, Blender's view keys (**1**/**3**/**7**) with axis views shown orthographic, view changes that animate and frame the model, a ground grid, anti-aliasing, and a switch to hide every component's outlines. |
 | **Geom Browser** | A search field that narrows the tree to matching components and selects them. |
-| **Files** | The system Open and Save dialogs by default. OpenVSP already offers them as a preference; TitanVSP only makes them the default. |
+| **Files** | **File → Open Recent** with the last ten models. The system Open and Save dialogs by default. OpenVSP already offers them as a preference; TitanVSP only makes them the default. |
 | **VSPAERO results** | Results Manager plots you can drag to pan, wheel to zoom, and hover to read x and y, with light x = 0 and y = 0 axes. |
 | **VSPAERO Viewer** | A dark theme, the main 3D view's mouse controls, and PNG export at any width through the Save dialog. |
 | **Export** | STL export at a resolution you choose, without changing the model; STEP and IGES in millimetres by default. |
@@ -278,6 +278,11 @@ direction, and opening a file frames its model at once.
 
 Type in the field above the Geom Browser's tree to narrow it to the components whose names contain
 the text; **Enter** selects them. Clear the field to see everything again.
+
+### Open Recent
+
+**File → Open Recent** lists the last ten models you opened or saved; pick one to open it.
+**Clear Recent** empties the list.
 
 ### System file dialogs by default
 

@@ -484,6 +484,19 @@ with `GetItemByRefId` for every row, quadratic in the number of components). Whi
 context-only ancestors are drawn in `FL_INACTIVE_COLOR` and no item is closed. Enter selects
 `m_SearchMatches` via `SetSelection`.
 
+## Open Recent
+
+`MainVSPScreen` adds `File/Open Recent` as an empty `FL_SUBMENU` right after Open, then
+`RebuildRecentMenu` refills it (`clear_submenu`, one item per file, a divider, Clear Recent; or an
+inactive "(none)"). Labels go through `MenuLabel`, since `add()` reads `/` as a submenu and `\`
+as an escape, and labels read `&` as a shortcut marker. Each item's user data is a
+`RecentItem { screen, index }`. `m_RecentFiles` (at most 10, newest first, absolute paths with
+backslashes, compared case-insensitively by `RecentKey`) is kept in the `openvsp.org`/`VSP`
+preferences, group `RecentFiles` (`Count`, `File0`...). `Update` adds the model's file whenever
+`GetVSP3FileName()` changes to an existing file (`m_RecentSeen`), which covers Open, Save As,
+launch and scripts in one place. `OpenVSPFile` is File → Open's body, shared with the recent
+items; a missing file is reported and dropped.
+
 ## File chooser
 
 This is upstream code: `ScreenMgr::FileChooser` and both dialogs are OpenVSP's. TitanVSP only changed the
