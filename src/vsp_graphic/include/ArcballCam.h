@@ -84,6 +84,10 @@ public:
      */
     glm::vec3 getRotationEulerAngles();
 
+    // TitanVSP: see Camera::Pose.
+    Pose getPose();
+    void setPose( const Pose & p );
+
     /*!
     * Panning the scene.
     *

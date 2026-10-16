@@ -162,6 +162,42 @@ void Camera::changeView( Common::VSPenum type )
     }
 }
 
+Camera::Pose Camera::blendPose( const Pose & a, const Pose & b, float t )
+{
+    Pose p;
+
+    // Slerp of unit quaternions, as 4-vectors.
+    glm::vec4 qa = a.quat, qb = b.quat;
+    float d = glm::dot( qa, qb );
+    if ( d < 0.0f )
+    {
+        qb = -qb;
+        d = -d;
+    }
+    if ( d > 0.9995f )
+    {
+        p.quat = glm::normalize( qa + ( qb - qa ) * t );
+    }
+    else
+    {
+        float th = acos( std::min( d, 1.0f ) );
+        float s = sin( th );
+        p.quat = qa * ( sin( ( 1.0f - t ) * th ) / s ) + qb * ( sin( t * th ) / s );
+    }
+
+    p.pan = a.pan + ( b.pan - a.pan ) * t;
+    p.cor = a.cor + ( b.cor - a.cor ) * t;
+    if ( a.zoom > 0.0f && b.zoom > 0.0f )
+    {
+        p.zoom = exp( log( a.zoom ) + ( log( b.zoom ) - log( a.zoom ) ) * t );
+    }
+    else
+    {
+        p.zoom = a.zoom + ( b.zoom - a.zoom ) * t;
+    }
+    return p;
+}
+
 void Camera::_calculateProjection()
 {
     float w = _vWidth / 2.0;

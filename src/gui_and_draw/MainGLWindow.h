@@ -12,6 +12,10 @@
 
 #include "Vec3d.h"
 #include "Common.h"
+#include "Camera.h"
+
+#include <chrono>
+#include <functional>
 
 #include "DrawObj.h"
 
@@ -148,6 +152,12 @@ public:
     void UpdateRotationParms();
     void UpdateAllViewParms();
 
+    // TitanVSP: turns the selected viewport's camera to a view over a fraction of a second.  With
+    // fit, it also centres the visible model and zooms to frame it in that view.  done runs once
+    // the camera arrives, unless another view change or the mouse interrupts it.
+    void AnimateView( VSPGraphic::Common::VSPenum type, bool fit, std::function< void() > done );
+    void StopViewAnim();
+
 // Private helper functions.
 private:
     void _initGLEW();
@@ -215,6 +225,13 @@ private:
     // Shift it's added to or taken out of the selection; on empty space it clears the selection.
     void ClickSelect( int x, int y, bool toggle );
     static void RefocusCB( void * data );   // Takes the keyboard back after a geom window opens.
+
+    static void ViewAnimCB( void * data );
+    bool m_ViewAnim = false;
+    VSPGraphic::Camera * m_ViewAnimCam = nullptr;
+    VSPGraphic::Camera::Pose m_ViewAnimFrom, m_ViewAnimTo;
+    std::chrono::steady_clock::time_point m_ViewAnimStart;
+    std::function< void() > m_ViewAnimDone;
 
     //==== TitanVSP: Blanks as balls ====//
     // A Blank has no surface, so it's drawn as a small shaded ball at its origin -- a fixed size on

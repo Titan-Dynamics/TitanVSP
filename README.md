@@ -255,6 +255,10 @@ Blender keys on the number row or keypad: **1** Front, **3** Left (nose to the l
 and with **Ctrl** Rear, Right and Bottom. Orbit the view, pick an isometric view or press **5**, and it goes back to
 perspective, if that's what it was. Keypad **5** toggles perspective too.
 
+Picking a view from the menu or the keys turns the camera to it smoothly, with the visible model
+centred and framed, and only then switches to orthographic. Click or scroll in the view to stop
+it where it is.
+
 All four are on for new models, and each model saves its own settings.
 
 ### Geom Browser search

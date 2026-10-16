@@ -341,6 +341,28 @@ glm::vec3 ArcballCam::getCOR()
     return glm::vec3( _cMat[3][0], _cMat[3][1], _cMat[3][2] );
 }
 
+Camera::Pose ArcballCam::getPose()
+{
+    Pose p;
+    p.quat = _globalQuat;
+    p.pan = _pan;
+    p.cor = getCOR();
+    p.zoom = _oZoom;
+    return p;
+}
+
+// As load() applies a saved camera, keeping the projection type.
+void ArcballCam::setPose( const Pose & p )
+{
+    _globalQuat = _normalizeQuat( p.quat );
+    _pan = p.pan;
+    _rMat = _toMatrix( _globalQuat );
+    _tMat = glm::translate( glm::mat4( 1.0f ), glm::vec3( _pan.x, _pan.y, 0.0f ) );
+    _cMat = glm::translate( glm::mat4( 1.0f ), p.cor );
+    _modelviewMatrix = _tMat * _rMat * _cMat;
+    relativeZoom( p.zoom );
+}
+
 glm::vec3 ArcballCam::_toSphere3D( int x, int y )
 {
     glm::vec3 result = glm::vec3( _toNDC2f( ( float )x, ( float )y ), 0.f );

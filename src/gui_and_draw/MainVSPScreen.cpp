@@ -892,14 +892,12 @@ void MainVSPScreen::SetView( int viewport, int view )
     m_GlWin->UpdateAllViewParms();
 }
 
+// TitanVSP: the View menu and the view keys.  The camera turns to the view, centring and framing
+// the visible model, as Blender's does.  An axis view then shows orthographic (see EndSnapOrtho);
+// an isometric one goes back to perspective first.  Centring keeps the zoom and projection.
 void MainVSPScreen::SetView( int view )
 {
-    m_GlWin->setView( static_cast < VSPGraphic::Common::VSPenum > ( view ) );
-
-    m_GlWin->UpdateAllViewParms();
-
-    // TitanVSP: an axis view shows orthographic (see EndSnapOrtho); an isometric one goes back to
-    // perspective.  Centring keeps whichever it is.
+    bool axis = false;
     switch ( view )
     {
     case VSPGraphic::Common::VSP_CAM_TOP:
@@ -908,11 +906,7 @@ void MainVSPScreen::SetView( int view )
     case VSPGraphic::Common::VSP_CAM_BOTTOM:
     case VSPGraphic::Common::VSP_CAM_REAR:
     case VSPGraphic::Common::VSP_CAM_RIGHT:
-        if ( VehicleMgr.GetVehicle()->m_ViewPerspective() )
-        {
-            m_SnapOrtho = true;
-            ApplyPerspective();
-        }
+        axis = true;
         break;
     case VSPGraphic::Common::VSP_CAM_CENTER:
         break;
@@ -920,6 +914,16 @@ void MainVSPScreen::SetView( int view )
         EndSnapOrtho();
         break;
     }
+
+    bool fit = view != VSPGraphic::Common::VSP_CAM_CENTER;
+    m_GlWin->AnimateView( static_cast < VSPGraphic::Common::VSPenum > ( view ), fit, [this, axis]()
+    {
+        if ( axis && VehicleMgr.GetVehicle()->m_ViewPerspective() )
+        {
+            m_SnapOrtho = true;
+            ApplyPerspective();
+        }
+    } );
 }
 
 // Back to perspective after an axis view, if the model is in perspective.

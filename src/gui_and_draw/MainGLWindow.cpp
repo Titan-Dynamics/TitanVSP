@@ -229,6 +229,12 @@ int VspGlWindow::handle( int fl_event )
     int dx = Fl::event_dx();
     int dy = Fl::event_dy();
 
+    // TitanVSP: taking hold of the view with the mouse stops a view change where it is.
+    if ( fl_event == FL_PUSH || fl_event == FL_MOUSEWHEEL )
+    {
+        StopViewAnim();
+    }
+
     switch( fl_event )
     {
     case FL_ENTER:
@@ -3290,6 +3296,121 @@ void VspGlWindow::GizmoDraw()
     glPopAttrib();
 
     glUseProgram( program );
+}
+
+//==== TitanVSP: animated view changes ====//
+
+void VspGlWindow::AnimateView( VSPGraphic::Common::VSPenum type, bool fit, std::function< void() > done )
+{
+    VSPGraphic::Display * display = m_GEngine->getDisplay();
+    VSPGraphic::Viewport * vp = display ? display->getViewport() : nullptr;
+    VSPGraphic::Camera * cam = display ? display->getCamera() : nullptr;
+
+    // Start from wherever the camera is, mid-way through another change or not.
+    StopViewAnim();
+    if ( !vp || !cam )
+    {
+        if ( display )
+        {
+            display->changeView( type );
+        }
+        UpdateAllViewParms();
+        if ( done )
+        {
+            done();
+        }
+        return;
+    }
+
+    // Where the camera ends up: the view, then the model centred and framed in it.
+    VSPGraphic::Camera::Pose from = cam->getPose();
+    cam->changeView( type );
+    BndBox bb;
+    Vehicle* veh = VehicleMgr.GetVehicle();
+    if ( fit && veh && veh->GetVisibleBndBox( bb ) && vp->width() > 0 && vp->height() > 0 )
+    {
+        vec3d c = bb.GetCenter();
+        cam->setCOR( -c.x(), -c.y(), -c.z() );
+        cam->relativePan( 0.0f, 0.0f );
+
+        // The box's corners in the view: half its width and height on screen, in model units.
+        glm::mat4 mv = cam->getModelViewMatrix();
+        float hx = 0.0f, hy = 0.0f;
+        for ( const vec3d & p : bb.GetCornerPnts() )
+        {
+            glm::vec4 q = mv * glm::vec4( p.x(), p.y(), p.z(), 1.0f );
+            hx = std::max( hx, std::fabs( q.x ) );
+            hy = std::max( hy, std::fabs( q.y ) );
+        }
+        // Zoom is model units per pixel; leave a margin round the model.
+        float z = 1.15f * std::max( 2.0f * hx / vp->width(), 2.0f * hy / vp->height() );
+        if ( z > 0.0f && std::isfinite( z ) )
+        {
+            cam->relativeZoom( z );
+        }
+    }
+    m_ViewAnimTo = cam->getPose();
+    cam->setPose( from );
+
+    m_ViewAnimFrom = from;
+    m_ViewAnimCam = cam;
+    m_ViewAnimDone = done;
+    m_ViewAnimStart = std::chrono::steady_clock::now();
+    m_ViewAnim = true;
+    Fl::add_timeout( 1.0 / 60.0, ViewAnimCB, this );
+}
+
+// Leaves the camera where it is.
+void VspGlWindow::StopViewAnim()
+{
+    if ( m_ViewAnim )
+    {
+        Fl::remove_timeout( ViewAnimCB, this );
+        m_ViewAnim = false;
+        m_ViewAnimDone = nullptr;
+        UpdateAllViewParms();
+    }
+}
+
+void VspGlWindow::ViewAnimCB( void * data )
+{
+    VspGlWindow * win = static_cast< VspGlWindow * >( data );
+    if ( !win || !win->m_ViewAnim )
+    {
+        return;
+    }
+
+    // The layout or the selected viewport changed: let it be.
+    VSPGraphic::Camera * cam = win->m_GEngine->getDisplay()->getCamera();
+    if ( cam != win->m_ViewAnimCam )
+    {
+        win->m_ViewAnim = false;
+        win->m_ViewAnimDone = nullptr;
+        return;
+    }
+
+    const double duration = 0.35;
+    double t = std::chrono::duration< double >( std::chrono::steady_clock::now() - win->m_ViewAnimStart ).count() / duration;
+    if ( t >= 1.0 )
+    {
+        cam->setPose( win->m_ViewAnimTo );
+        win->m_ViewAnim = false;
+        std::function< void() > done = win->m_ViewAnimDone;
+        win->m_ViewAnimDone = nullptr;
+        win->UpdateAllViewParms();
+        win->redraw();
+        if ( done )
+        {
+            done();
+        }
+        return;
+    }
+
+    // Ease in and out.
+    float e = (float)( t * t * t * ( t * ( 6.0 * t - 15.0 ) + 10.0 ) );
+    cam->setPose( VSPGraphic::Camera::blendPose( win->m_ViewAnimFrom, win->m_ViewAnimTo, e ) );
+    win->redraw();
+    Fl::repeat_timeout( 1.0 / 60.0, ViewAnimCB, data );
 }
 
 //==== TitanVSP: Blender's view keys and auto perspective ====//

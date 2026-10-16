@@ -122,6 +122,25 @@ public:
     virtual glm::vec3 getRotationEulerAngles() = 0;
 
     /*!
+    * TitanVSP: where the camera is -- rotation, pan, centre of rotation and zoom -- to read, set
+    * and blend, for animated view changes.
+    */
+    struct Pose
+    {
+        glm::vec4 quat;
+        glm::vec2 pan;
+        glm::vec3 cor;
+        float zoom;
+    };
+    virtual Pose getPose() = 0;
+    virtual void setPose( const Pose & p ) = 0;
+    /*!
+    * From a (t = 0) to b (t = 1): the rotation along the shorter way round, the zoom
+    * geometrically, so zooming far in or out looks steady.
+    */
+    static Pose blendPose( const Pose & a, const Pose & b, float t );
+
+    /*!
     * Panning the scene.
     *
     * px, py - previous xy mouse location.
