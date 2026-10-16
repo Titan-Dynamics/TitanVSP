@@ -33,7 +33,7 @@ previous one, so there's only ever one: the latest.
 | --- | --- |
 | **Geometry** | A **Fillet** component: smooth, watertight rolling-ball fillets at wing roots and wherever two bodies meet. A plain **Cylinder** component set by just its length and diameter. |
 | **Interface** | A dark theme throughout, including title bars and the 3D view; light component lines, with the selected component drawn brighter inside a thin white box; the Titan Dynamics logo in the 3D view. |
-| **3D view** | Click a component to select it, and Blender-style move arrows to drag it along X, Y or Z in whole units, or Blender's keys: **G**/**R** to move or rotate with the mouse (an axis and a number for exact amounts), **Shift+D** to duplicate, **A**/**H**/**Z** to select, hide and switch wireframe, **X** to delete. A keyboard button in the corner lists them all. Blanks shown as balls. An orthographic/perspective switch (**View → Perspective**, key **5**) that keeps the framing, Blender's view keys (**1**/**3**/**7**) with axis views shown orthographic, a ground grid, anti-aliasing, and a switch to hide every component's outlines. |
+| **3D view** | Click a component to select it, and Blender-style move arrows to drag it along X, Y or Z in whole units, or Blender's keys: **G**/**R** to move or rotate with the mouse (an axis and a number for exact amounts), **Shift+D** to duplicate, **A**/**H**/**Z** to select, hide and switch wireframe, **X** to delete. A keyboard button in the corner lists them all. Blanks shown as balls. An orthographic/perspective switch (**View → Perspective**, key **5**) that keeps the framing, Blender's view keys (**1**/**3**/**7**) with axis views shown orthographic, view changes that animate and frame the model, a ground grid, anti-aliasing, and a switch to hide every component's outlines. |
 | **Geom Browser** | A search field that narrows the tree to matching components and selects them. |
 | **Files** | The system Open and Save dialogs by default. OpenVSP already offers them as a preference; TitanVSP only makes them the default. |
 | **VSPAERO results** | Results Manager plots you can drag to pan, wheel to zoom, and hover to read x and y, with light x = 0 and y = 0 axes. |
@@ -145,8 +145,8 @@ two kinds of join:
 
 | Add the Fillet to | It blends into | Shape |
 | --- | --- | --- |
-| a **Wing** | the Fuselage, Pod or Stack its root is buried in | Runs round the wing root from the lower trailing edge to the upper one, and tapers to a point at each end of the trailing edge |
-| a **Fuselage, Pod or Stack** | the Fuselage, Pod, Stack or **Wing** it overlaps most: a canopy, a pod or boom, a fuselage set into a wing | A closed ring round each loop where they meet; a body passing right through another gets two rings |
+| a **Wing** | the Fuselage, Pod, Stack or Cylinder its root is buried in | Runs round the wing root from the lower trailing edge to the upper one, and tapers to a point at each end of the trailing edge |
+| a **Fuselage, Pod, Stack or Cylinder** | the Fuselage, Pod, Stack, Cylinder or **Wing** it overlaps most: a canopy, a pod or boom, a fuselage set into a wing | A closed ring round each loop where they meet; a body passing right through another gets two rings |
 
 The Fillet finds the other part on its own. It is a separate, closed, watertight body overlapping
 both parts, and it leaves them untouched.
@@ -198,7 +198,7 @@ vsp.ExportFile('fillets.stl', vsp.SET_FIRST_USER, vsp.EXPORT_STL)
 ```
 
 The parameters are `Radius`, `NumStations`, `TETaper` and `Sink`, all in the `Design` group.
-`AddGeom('FILLET', parent)` fails if the parent isn't a Wing, Fuselage, Pod or Stack.
+`AddGeom('FILLET', parent)` fails if the parent isn't a Wing, Fuselage, Pod, Stack or Cylinder.
 
 #### Limits
 
@@ -256,6 +256,9 @@ the view to move along it.
 **View → Grid** shows a ground grid on the XY plane that fades out around the model, with the X
 and Y axes in red and green. **View → Anti-aliasing** smooths the lines in the 3D view.
 **View → Outlines** shows or hides the black outlines (feature lines) of every component at once.
+Perspective, Grid, Anti-aliasing and Outlines are all on for new models, and each model saves its
+own settings. The white border round the active viewport is off by default; **Window → Border
+Toggle** turns it on.
 
 **View → Perspective** (key **5**) switches the 3D view between orthographic and perspective,
 keeping the same framing.
@@ -270,8 +273,6 @@ Picking a view from the menu or the keys turns the camera to it smoothly, with t
 centred and framed, and only then switches to orthographic. Click or scroll in the view to stop
 it where it is. **View → Fit On Screen** (**F**) animates the same way, keeping the view's
 direction, and opening a file frames its model at once.
-
-All four are on for new models, and each model saves its own settings.
 
 ### Geom Browser search
 
