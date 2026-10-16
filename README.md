@@ -24,6 +24,7 @@ previous one, so there's only ever one: the latest.
 - [Keeping up with upstream](#keeping-up-with-upstream)
 - [License](#license)
 
+<img width="2775" height="1668" alt="Screenshot 2026-10-16 005234" src="https://github.com/user-attachments/assets/6655e313-4ed1-40c8-a472-63c87663f4ef" />
 <img width="2879" height="4277" alt="graphic" src="https://github.com/user-attachments/assets/9bd0d0ae-3e84-4ff8-8be1-0973074ecb38" />
 
 ## Highlights
