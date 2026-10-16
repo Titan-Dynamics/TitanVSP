@@ -438,7 +438,7 @@ version numbers in [README.md](README.md), [CHANGES.md](CHANGES.md) and the rele
 
 ## Releases
 
-Releases are on GitHub, tagged `v<openvsp version>-titan.<n>` (e.g. `v3.55.0-titan.7`), with the
+Releases are on GitHub, tagged `v<openvsp version>-titan.<n>` (e.g. `v3.55.0-titan.8`), with the
 `PACKAGE` zip attached and its SHA-256 in the notes. Make a new tag for each release rather than
 moving an old one, and delete the release it replaces only when asked. Keep the release table at
 the top of [CHANGES.md](CHANGES.md) current, including what's on `main` but not yet released.

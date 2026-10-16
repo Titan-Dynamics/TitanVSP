@@ -27,8 +27,8 @@ length unit. Models keep whatever they were saved with.
 
 | Release | What's in it |
 | --- | --- |
-| Not yet released (`main`) | The Cylinder component, Geom Browser search, keyboard move and rotate (G / R), the ground grid, the anti-aliasing switch, the thicker outline, and the 3D view settings (perspective, grid, anti-aliasing) on by default and saved with each model. |
-| [v3.55.0-titan.7](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.7) | Everything else on this page. The zip includes this file, `CHANGES.md`. |
+| [v3.55.0-titan.8](https://github.com/Titan-Dynamics/TitanVSP/releases/tag/v3.55.0-titan.8) | Everything on this page. |
+| v3.55.0-titan.7 (withdrawn) | titan.8 without: the Cylinder component, Geom Browser search, keyboard move and rotate (G / R), the ground grid, the anti-aliasing switch, the thicker outline, and the 3D view settings (perspective, grid, anti-aliasing) on by default and saved with each model. Replaced by titan.8. |
 | v3.55.0-titan.6 (withdrawn) | titan.7 without `CHANGES.md` in the zip. Replaced by titan.7. |
 | v3.55.0-titan.5 (withdrawn) | titan.6 without perspective by default, saved with each model. Replaced by titan.6. |
 | v3.55.0-titan.4 (withdrawn) | titan.5 without the move arrows, click-to-select, Blanks drawn as balls, and the brighter selection with thinner selection boxes. Replaced by titan.5. |
